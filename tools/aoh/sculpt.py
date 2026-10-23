@@ -378,7 +378,7 @@ def ball(at, r, m: Material, rot=(0, 0, 0)) -> Ellipsoid:
 def rod(a, b, r0, m: Material, r1=None, capped=True) -> Frustum:
     """A cylinder or cone from point a to point b."""
     a, b = np.asarray(a, float), np.asarray(b, float)
-    return Frustum(m, axis_frame(a, b), r0=r0, r1=r0 if r1 is None else r1, h=float(np.linalg.norm(b - a)),
+    return Frustum(m, axis_frame(a, b), r0=r0, r1=r0 if r1 is None else r1, h=max(1e-3, float(np.linalg.norm(b - a))),
                    capped=capped)
 
 
