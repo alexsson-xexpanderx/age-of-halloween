@@ -40,30 +40,41 @@ from .textures import parse
 LAVA = 15  # "Old Water"
 MEDIUM_WATER = 23  # the terrain it must behave like
 WATER, SHALLOWS = 1, 4  # where a Dock may stand: (Water, Shallows) becomes (Water, lava)
-COLOURS = ("#410000", "#5a0800", "#690b00", "#a01500", "#d06010", "#ffc700")  # the crust, then a crack's glow
-SHADES = tuple(range(32, 40)) + tuple(range(64, 72))  # the red and the yellow player's colours, as plain colours
-MINIMAP = (226, 98, 14)
-MAP_NAME = "Team Lava Islands"
+COLOURS = ("#0a2a10", "#06180a", "#1e6a26", "#2a8a2a", "#7ad84a", "#d8ff9a")  # the brew dark to light, froth, rims
+SHADES = tuple(range(48, 56)) + tuple(range(64, 72))  # the green and the yellow player's colours, as plain colours
+MINIMAP = (70, 200, 60)
+MAP_NAME = "Witch Brew Islands"
 MAP_FILE = MAP_NAME + ".rms"
 MARK = "Age of Halloween"  # in the map's first lines: --restore removes only a map that has it
 
 
 # --------------------------------------------------------------------------- the look
 
-def lava_texture(seed: str = "lava", plates: int = 5) -> np.ndarray:
-    """16x16 lava: a plate of dark crust round each of a few points, cracked where plates meet, the cracks glowing red
-    to yellow-hot. The distances wrap round the block's edges, so the blocks join up."""
+def lava_texture(seed: str = "lava", bubbles: int = 7, n: int = 64) -> np.ndarray:
+    """n x n witch's brew (smooth, not blocky): dark green swirls of thick liquid, lighter where it churns, and a few
+    bubbles with bright rims. Everything wraps round the edges, so the tiles join up."""
     rng = np.random.default_rng(zlib.crc32(seed.encode()))
-    points = rng.uniform(0, 16, (plates, 2))
-    yy, xx = np.mgrid[0:16, 0:16] + 0.5
-    dist = []
-    for py, px in points:
-        dy, dx = np.abs(yy - py), np.abs(xx - px)
-        dist.append(np.hypot(np.minimum(dy, 16 - dy), np.minimum(dx, 16 - dx)))
-    near = np.sort(np.array(dist), axis=0)
-    edge = near[1] - near[0]  # 0 where two plates meet
-    heat = 1 - (edge / edge.max()) ** 0.6 + rng.normal(0, 0.06, edge.shape)  # 1 on the cracks
-    return np.array([parse(c) for c in COLOURS])[np.digitize(heat, [0.35, 0.55, 0.7, 0.8, 0.9])]
+    yy, xx = (np.mgrid[0:n, 0:n] + 0.5) / n
+    swirl = np.zeros((n, n))
+    for k in range(1, 4):  # a few waves of every direction, whole periods across the tile so it wraps
+        for _ in range(3):
+            fx, fy = rng.integers(-3, 4, 2) * k
+            swirl += np.sin(2 * np.pi * (fx * xx + fy * yy) + rng.uniform(0, 6.3)) / k
+    swirl = (swirl - swirl.min()) / (swirl.max() - swirl.min())
+    cols = np.array([parse(c)[:3] for c in COLOURS])
+    rgb = cols[0] + (cols[2] - cols[0]) * swirl[..., None] ** 1.4
+    for _ in range(bubbles):  # bubbles: a dark middle, a bright rim
+        cy, cx, r = rng.uniform(0, 1), rng.uniform(0, 1), rng.uniform(0.04, 0.09)
+        dy, dx = np.abs(yy - cy), np.abs(xx - cx)
+        d = np.hypot(np.minimum(dy, 1 - dy), np.minimum(dx, 1 - dx)) / r
+        rim = np.clip(1 - np.abs(d - 1) * 4, 0, 1)
+        rgb = np.where((d < 1)[..., None], cols[1], rgb)
+        rgb = rgb + (cols[5] - rgb) * rim[..., None]
+    rgb = rgb + (cols[4] - rgb) * (np.clip(swirl - 0.85, 0, 1) * 4)[..., None]  # froth on the churning crests
+    out = np.zeros((n, n, 5), np.float32)
+    out[..., :3] = np.clip(rgb, 0, 1)
+    out[..., 3] = 1
+    return out
 
 
 @lru_cache(maxsize=None)

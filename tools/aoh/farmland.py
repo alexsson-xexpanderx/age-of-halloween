@@ -108,12 +108,68 @@ def field(stage: str, reach: int = 2, per_tile: int = PER_TILE) -> V.Structure:
     return s
 
 
+def patch(stage: str, reach: int = 2, per_tile: int = PER_TILE):
+    """Age of Halloween's farm: a pumpkin patch around one tile, `reach` tiles each way, the same in every tile so the
+    tiles join up. Dark furrowed soil; then green shoots, vines with small pumpkins, ripe orange pumpkins under big
+    leaves; the exhausted farm dry and cracked with rotted, caved-in pumpkins and dead vines."""
+    from . import paint as P
+    from . import sculpt as S
+    from .geometry import Part
+    T = per_tile * V.BLOCK  # a tile, in model units
+    dead = stage == "dead"
+
+    def soil(look):
+        q = np.mod(look.p, T)
+        furrow = 0.5 + 0.5 * np.cos(q[:, 1] / T * 2 * np.pi * 4)
+        base = np.array(P.hexrgb("#4a3626") if not dead else P.hexrgb("#5a4a3a"))
+        dark = np.array(P.hexrgb("#1e140c") if not dead else P.hexrgb("#2e2418"))
+        grain = 0.5 + 0.5 * np.sin(q[:, 0] * 1.7) * np.sin(q[:, 1] * 2.3 + q[:, 0] * 0.5)
+        c = dark + (base - dark) * (0.3 + 0.5 * furrow + 0.2 * grain)[:, None]
+        if dead:  # cracks
+            crack = np.abs(np.sin(q[:, 0] * 0.9 + np.sin(q[:, 1] * 0.7) * 2.0)) < 0.08
+            c = np.where(crack[:, None], dark * 0.6, c)
+        return c
+    ground = S.Material(color=soil)
+    vine = S.mat(P.hexrgb("#2e4a1c") if not dead else P.hexrgb("#4a3a24"))
+    leaf = S.Material(color=lambda l: np.broadcast_to(np.array(P.hexrgb("#3a5a24") if not dead else P.hexrgb(
+        "#5a4428")), (len(l.p), 3)), vivid=0.6)
+    shapes = []
+    for i in range(-reach, reach + 1):
+        for j in range(-reach, reach + 1):
+            ox, oy = i * T - T / 2, j * T - T / 2
+            shapes.append(S.block((ox, oy, -4.0), (ox + T, oy + T, 0.0), ground, at=(ox + T / 2, oy + T / 2, -2.0)))
+            if stage == "tilled":
+                continue
+            y = oy + T * 0.5
+            if stage != "sprouts":  # a vine along the row
+                shapes.append(S.rod((ox, y, 0.6), (ox + T, y, 0.6), 0.7, vine))
+            for k, x in enumerate((ox + T * 0.25, ox + T * 0.75)):
+                if stage == "sprouts":
+                    for d in (-1.2, 1.2):
+                        shapes.append(S.Ellipsoid(leaf, S._orient((x + d, y, 2.0), (0, 40 * d, 0)), radii=(1.6, 1.0, 0.3)))
+                    shapes.append(S.rod((x, y, 0.0), (x, y, 2.2), 0.3, vine))
+                    continue
+                shapes.append(S.Ellipsoid(leaf, S._orient((x - 3.0, y + 2.5, 2.0), (20, 0, 30)), radii=(3.4, 2.6, 0.5)))
+                r = {"growing": 2.2, "ripe": 4.2, "dead": 3.6}[stage] * (1.0 if k == 0 else 0.8)
+                if dead:
+                    shapes.append(S.ball((x, y - 1.0, 0.0), (r * 1.1, r, r * 0.45), P.pumpkin(
+                        base=P.hexrgb("#6a5a2a"), dark=P.hexrgb("#2a2010"), rot=1.0, seed=k)))
+                else:
+                    shapes.append(S.Ellipsoid(P.pumpkin(base=P.PUMPKIN if stage == "ripe" else P.hexrgb("#8a8a3a"),
+                                                        rot=0.0, seed=k), S._orient((x, y - 1.0, r * 0.75)),
+                                              radii=(r * 1.1, r, r * 0.8)))
+                    if stage == "ripe":
+                        shapes.append(S.rod((x, y - 1.0, r * 1.5), (x + 0.6, y - 1.0, r * 1.5 + 1.6), 0.45, vine))
+    return Part("farm", boxes=shapes)
+
+
 @lru_cache(maxsize=None)
 def texture(stage: str, per_tile: int = PER_TILE) -> tuple[Frame, tuple[int, int]]:
     """The farm rendered from the game's camera, and the screen position of the centre tile's centre."""
-    root = field(stage, per_tile=per_tile).part(V.all_blocks())
-    cam = fit_camera(root, V.BUILDING_HEADING, scale=scale(per_tile), pad=2)
-    frame = render(root, V.BUILDING_HEADING, camera=cam, shadow=False, outline=False)
+    from . import sculpt as S
+    root = patch(stage, per_tile=per_tile)
+    cam = S.fit_camera(root, V.BUILDING_HEADING, scale=scale(per_tile), pad=2)
+    frame = S.render(root, V.BUILDING_HEADING, camera=cam, shadow=False, ink=False)
     return frame, (int(cam.origin[0]), int(cam.origin[1]))
 
 

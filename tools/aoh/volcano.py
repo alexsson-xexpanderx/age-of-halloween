@@ -1,5 +1,6 @@
-"""Volcanoes on the lava: Villagers build one on the lava sea (terrain 15, lava.py) by their island's beach, and it
-erupts at the enemies that come within its range, raining lava bombs on ships, units and buildings.
+"""Witch's cauldrons on the brew: Villagers build one on the sea of brew (terrain 15, lava.py) by their island's beach,
+and it boils over at the enemies that come within its range, hurling bubbling brew at ships, units and buildings.
+(Age of Minecraft's volcano, the same in the game's data: the code still calls it the volcano.)
 
 The game has a tower made for the sea that it never lets anyone build: the Sea Tower (unit 785). It is still a tower
 (unit class 52), so the tower upgrades reach it: Fletching, Bodkin Arrow and Bracer, Masonry and Architecture, and
@@ -74,140 +75,135 @@ SITE, SINKING = "CNST3_NN", "DEXP3_NN"  # the Barracks' building site; the Dock'
 BOOM = "trebfire.wav"  # the Trebuchet's firing boom, on each eruption
 BUILDING_ICONS = (50705, 50706, 50707, 50708)  # in interfac.drs: one sheet per age
 HELP_STRINGS = 79000  # as gameplay.HELP_STRINGS
-TEXTS = {"name": "Volcano", "creation": "Build Volcano",
-         "help": "Build <b> Volcano<b> (<cost>) \nA volcano on the lava, by your island's beach. It erupts at "
-                 "enemies within range, raining lava bombs on ships, units and buildings. Build it on lava next to "
-                 "a beach, like a Dock. \n<hp> <attack> <armor> <piercearmor> <range>"}
-SHORT_HELP = "Build <b> Volcano<b> (<cost>) \nErupts at enemies, raining lava bombs on them."
+TEXTS = {"name": "Cauldron", "creation": "Build Cauldron",
+         "help": "Build <b> Cauldron<b> (<cost>) \nA witch's cauldron on the brew, by your island's beach. It boils "
+                 "over at enemies within range, hurling bubbling brew at ships, units and buildings. Build it on the "
+                 "brew next to a beach, like a Dock. \n<hp> <attack> <armor> <piercearmor> <range>"}
+SHORT_HELP = "Build <b> Cauldron<b> (<cost>) \nBoils over at enemies, hurling bubbling brew at them."
 
-# the volcano's model, in blocks: a cone of dark rock on an 8x8 footprint (three tiles), steeper towards its peak,
-# with a small crater of lava
-HEIGHT = 10
-RADIUS = 4.7
-STEEP = 1.6  # how much steeper the cone gets towards its peak
-CRATER = 1.15
-POOL = round(HEIGHT * (1 - 0.45 / (RADIUS - CRATER)) ** STEEP) - 1  # the crater's lava: a block below its rim
-ROCK = ("blackstone", "blackstone", "cobbled_deepslate", "blackstone", "deepslate_tiles")
-RIM = "nether_bricks"
+# the cauldron's model, in model units (sculpt.py): an iron pot on a ring of black rocks rising out of the brew,
+# three tiles across (half 64), green-blue fire under it
+POT_R = 40.0  # the pot's radius
+POT_Z = 46.0  # its middle's height
+RIM_Z = POT_Z + 22.0  # its rim: where the brew bubbles and the bombs leave it
+BREW = (0.49, 1.0, 0.42)
+LIME = (0.78, 1.0, 0.54)
 
 
 # --------------------------------------------------------------------------- the look
 
-def _rock(x: int, y: int, z: int) -> str:
-    return ROCK[zlib.crc32(f"volcano {x} {y} {z}".encode()) % len(ROCK)]
+def _brew_material(seed=0):
+    from . import paint as P
+    from . import sculpt as S
+
+    def color(look):
+        return P.mix(np.array(LIME), np.array([0.12, 0.55, 0.2]), P.noise(look.p, 2.0, seed))
+    return S.Material(color=color, glow=0.9, vivid=1.0)
 
 
-def _streams(x: int, y: int) -> bool:
-    """The lava running down from the crater: two streams, down the two sides facing the camera."""
-    return (x >= 4 and y == 4) or (y >= 5 and x == 3)
-
-
-def volcano(t: Optional[float] = None) -> V.Structure:
-    """The volcano: a cone of dark rock with a pool of lava in its crater, lava running down the two sides facing the
-    camera, a thin smoke plume and a team flag on its front slope. With `t` (0..1), erupting: a fountain of lava
-    thrown up out of the crater, highest as the bomb leaves (`FRAME`), and a dark cloud billowing over it."""
-    s = V.Structure("volcano", origin=(4.0, 4.0))
-    c = 4.0  # its peak, over the footprint's centre
-    tops = {}
-    for x in range(-1, 9):
-        for y in range(-1, 9):
-            d = math.hypot(x + 0.5 - c, y + 0.5 - c)
-            if CRATER < d <= RADIUS:  # highest at the crater's rim
-                tops[(x, y)] = int(round(HEIGHT * (1 - (d - CRATER) / (RADIUS - CRATER)) ** STEEP))
-    pool = POOL
-    for x in range(-1, 9):
-        for y in range(-1, 9):
-            if math.hypot(x + 0.5 - c, y + 0.5 - c) <= CRATER:  # the crater a block below its rim
-                tops[(x, y)] = pool
-    for (x, y), top in tops.items():
-        d = math.hypot(x + 0.5 - c, y + 0.5 - c)
-        for z in range(top + 1):
-            s.set(x, y, z, _rock(x, y, z))
-        if d <= CRATER:
-            s.set(x, y, top, "lava")
-        elif d <= CRATER + 1.0 and not _streams(x, y):
-            s.set(x, y, top, RIM)
-        elif _streams(x, y):  # down the step below it too, so a stream runs on unbroken
-            below = min((tops.get((x + dx, y + dy), -1) for dx, dy in ((1, 0), (0, 1))), default=-1)
-            s.fill(x, y, max(0, below + 1), x, y, top, "lava")
-    ox, oy = s.origin
-    B = V.BLOCK
-    rng = np.random.default_rng(zlib.crc32(b"volcano smoke"))
-    erupting = t is not None
-    for k in range(4):  # the smoke
-        size = (14 + k * 6) if erupting else (6 + k * 2.5)
-        grey = (0.28 if erupting else 0.62) + 0.05 * k
-        col = f"#{int(grey * 255):02x}{int(grey * 250):02x}{int(grey * 245):02x}"
-        drift = (rng.uniform(-3, 3), rng.uniform(-3, 3))
-        s.extras.append(cuboid(((c - ox) * B + drift[0] + k * 3 - size / 2, (c - oy) * B + drift[1] - k * 2 - size / 2,
-                                (HEIGHT + 1) * B + k * (16 if erupting else 9) + (40 if erupting else 0)),
-                               (size, size, size * 0.8), V.solid(col)))
-    if erupting:
-        s.extras += eruption(t, ((c - ox) * B, (c - oy) * B, (POOL + 1) * B))
-    from .structures import flag
-    flag(s, 6.3, 6.3, tops[(6, 6)] + 1, height=24, seed="volcano")
-    return s
+def volcano(t: Optional[float] = None) -> Part:
+    """The cauldron: a great iron pot on black rocks rising out of the brew, bubbling green, fire burning under it,
+    green fumes curling up and a team flag on a rock. With `t` (0..1), boiling over: a fountain of brew thrown up,
+    highest as the bomb leaves (`FRAME`)."""
+    from . import haunted as H
+    from . import paint as P
+    from . import sculpt as S
+    rng = np.random.default_rng(zlib.crc32(b"cauldron"))
+    rock = P.mottled(P.hexrgb("#2e2a32"), P.hexrgb("#0e0c10"), 3.0, 0.6, 3)
+    iron = P.metal(P.hexrgb("#26242c"), rust=0.4, seed=4, shine=0.7)
+    out = []
+    for a in np.linspace(0, 2 * math.pi, 12, endpoint=False):  # the rocks it stands on
+        r = rng.uniform(40, 56)
+        c = np.array([math.cos(a) * r, math.sin(a) * r, 0.0])
+        size = rng.uniform(9, 14)
+        out.append(H.hull(c + rng.normal(0, size * 0.55, (7, 3)) * np.array([1, 1, 0.9]) + (0, 0, size * 0.6), rock))
+    out.append(S.rod((0, 0, 0), (0, 0, POT_Z - 26.0), 34.0, rock, 26.0))
+    fire = S.Ellipsoid(S.mat((0.45, 0.95, 0.75), glow=1.0), S._orient((0, 0, POT_Z - 32.0)), radii=(30.0, 30.0, 10.0))
+    fire.casts = False
+    out.append(fire)
+    out.append(S.ball((0, 0, POT_Z), (POT_R, POT_R, POT_R * 0.75), iron).clip((0, 0, 1), RIM_Z - POT_Z))
+    out.append(S.torus((0, 0, RIM_Z), POT_R * 0.76, 3.0, iron))
+    out.append(S.rod((0, 0, RIM_Z - 1.0), (0, 0, RIM_Z + 1.2), POT_R * 0.72, _brew_material(5)))
+    for a in (0.6, 3.7):  # handles: rings of bone
+        out.append(S.torus((math.cos(a) * POT_R * 0.95, math.sin(a) * POT_R * 0.95, POT_Z + 6.0), 6.0, 1.4,
+                           P.bone(2), rot=(90, 0, math.degrees(a))))
+    for k in range(6):  # bubbles
+        a, r = rng.uniform(0, 2 * math.pi), rng.uniform(0, POT_R * 0.6)
+        b = S.ball((math.cos(a) * r, math.sin(a) * r, RIM_Z + 1.5), rng.uniform(2.0, 4.5), _brew_material(k))
+        b.casts = False
+        out.append(b)
+    for k in range(3):  # green fumes curling up
+        puff = S.Ellipsoid(S.Material(color=lambda l: np.broadcast_to(np.array((0.5, 0.82, 0.58)), (len(l.p), 3)),
+                                      glow=0.3, vivid=0.8),
+                           S._orient((rng.uniform(-6, 6), rng.uniform(-6, 6), RIM_Z + 14.0 + k * 13.0)),
+                           radii=(9.0 + k * 3, 9.0 + k * 3, 6.0 + k * 2))
+        puff.casts = False
+        puff.ink = False
+        out.append(puff)
+    out += H.team_flag((44.0, 44.0, 14.0), 24.0, 9)
+    root = Part("cauldron", boxes=out)
+    if t is not None:
+        root.boxes += eruption(t, (0.0, 0.0, RIM_Z))
+    return root
 
 
 def eruption(t: float, at: tuple[float, float, float]) -> list:
-    """A fountain of lava thrown up out of the crater at `at` (pixels), a moment `t` (0..1) of an eruption: blobs
-    flying up and out and falling back, bursting highest as the bomb leaves, and dark rocks flung out with them."""
+    """Brew boiling over at `at`, a moment `t` (0..1) of it: glowing blobs flying up and out and falling back,
+    highest as the bomb leaves, a skull or two flung out with them."""
+    from . import sculpt as S
     x0, y0, z0 = at
-    rng = np.random.default_rng(zlib.crc32(b"volcano eruption"))
+    rng = np.random.default_rng(zlib.crc32(b"cauldron eruption"))
     peak = (FRAME + 0.5) / ERUPTION_FRAMES
-    burst = math.exp(-((t - peak) / 0.22) ** 2)  # 1 as the bomb leaves, low at the start and the end
-    out = [cuboid((x0 - 9, y0 - 9, z0 + 6), (18, 18, 4 + 20 * burst), V.solid("#ffb21e"))]  # the jet's base
-    for k in range(48):
-        phase = (t * 1.5 + k / 48) % 1
+    burst = math.exp(-((t - peak) / 0.22) ** 2)
+    jet = S.Ellipsoid(_brew_material(1), S._orient((x0, y0, z0 + 6 + 30 * burst)), radii=(10.0, 10.0, 8 + 30 * burst))
+    jet.casts = False
+    jet.ink = False
+    out = [jet]
+    for k in range(32):
+        phase = (t * 1.5 + k / 32) % 1
         angle = rng.uniform(0, 2 * math.pi)
-        reach = rng.uniform(6, 34)
+        reach = rng.uniform(6, 40)
         rise = rng.uniform(60, 150) * (0.35 + 0.65 * burst)
         z = z0 + 10 + 4 * rise * phase * (1 - phase)
         r = reach * phase
-        size = rng.uniform(4, 9) * (1.15 - 0.55 * phase)
-        dark = k % 7 == 0  # a rock flung out with the lava
-        colour = "#3a302c" if dark else ("#ffe066", "#ffb21e", "#ff7a10", "#d8400c")[min(3, int(phase * 4))]
-        out.append(cuboid((x0 + r * math.cos(angle) - size / 2, y0 + r * math.sin(angle) - size / 2, z),
-                          (size, size, size), V.solid(colour)))
+        size = rng.uniform(2.5, 5.5) * (1.15 - 0.55 * phase)
+        blob = S.ball((x0 + r * math.cos(angle), y0 + r * math.sin(angle), z), size, _brew_material(k))
+        blob.casts = False
+        blob.ink = False
+        out.append(blob)
     return out
 
 
 def bomb() -> Unit:
-    """A lava bomb: a ball of dark rock cracked through with glowing lava, sparks trailing off it, tumbling as the
-    fireball does (animation rig "fireball")."""
-    rng = np.random.default_rng(zlib.crc32(b"lava bomb"))
-    colours = ["#2b2420"] * 6 + ["#4a3a32"] * 2 + ["#ff7a10"] * 7 + ["#ffd24a"] * 3 + ["#c8380c"] * 2
-    ball = []
-    r = 5.4  # bigger than the dragon's fireball: it must show from afar
-    for x in range(-6, 6):
-        for y in range(-6, 6):
-            for z in range(-6, 6):
-                if (x + 0.5) ** 2 + (y + 0.5) ** 2 + (z + 0.5) ** 2 <= r * r:
-                    ball.append(cuboid((x, y, z), (1, 1, 1), V.solid(colours[int(rng.integers(len(colours)))])))
-    sparks = [cuboid((x, y, z), (1.5, 1.5, 1.5), V.solid(col)) for x, y, z, col in (
-        (5.5, 1, 1, "#ffb21e"), (-7, -1, 0, "#ff6a10"), (0, 5.5, -4, "#ffd24a"), (-1, -7, 3, "#ff6a10"))]
-    root = Part("root").add(Part("ball", boxes=ball), Part("flame_a", boxes=sparks[:2]),
-                            Part("flame_b", boxes=sparks[2:]))
-    return Unit("lava_bomb", "Lava bomb", "the volcano's shot", "fireball", root, group="easter", attack="none")
+    """A blob of boiling brew with a skull in it, drops trailing off it, tumbling as the fireball does (animation rig
+    "fireball")."""
+    from . import sculpt as S
+    from .graveyard import skull
+    core = S.ball((0, 0, 0), 5.4, _brew_material(2))
+    core.ink = False
+    drops_a = [S.ball((4.0, -6.0, 1.0), 1.6, _brew_material(3)), S.ball((-3.0, -8.0, -1.0), 1.2, _brew_material(4))]
+    drops_b = [S.ball((-4.0, -6.0, 2.0), 1.6, _brew_material(5)), S.ball((3.0, -8.5, -2.0), 1.2, _brew_material(6))]
+    root = Part("root").add(Part("ball", boxes=[core] + skull((0, 2.0, -2.0), 2.4, 3)), Part("flame_a", boxes=drops_a),
+                            Part("flame_b", boxes=drops_b))
+    return Unit("brew_bomb", "Brew bomb", "the cauldron's shot", "fireball", root, group="easter", attack="none")
 
 
 def _building_frames(models: list, quant) -> list[slp.SlpFrame]:
     """Pictures of building models from the building view, all through one camera (so they line up), each with the
     footprint's centre on its hotspot."""
     from .export import _crop
-    from .render import fit_camera, render
-    parts = [m.part(V.all_blocks()) for m in models]
-    whole = Part("all", children=parts)
+    from .sculpt import fit_camera, render
+    whole = Part("all", children=models)
     cam = fit_camera(whole, V.BUILDING_HEADING, pad=6)
     return [_crop(quant.frame_codes(render(p, V.BUILDING_HEADING, camera=cam), obstruction=False), cam.origin)
-            for p in parts]
+            for p in models]
 
 
 _SLPS: dict[tuple, bytes] = {}
 
 
 def volcano_slp(quant) -> bytes:
-    """The volcano at rest: one picture."""
+    """The cauldron at rest: one picture."""
     key = ("rest", np.asarray(quant.palette).tobytes())
     if key not in _SLPS:
         _SLPS[key] = slp.encode(_building_frames([volcano()], quant))
@@ -215,7 +211,7 @@ def volcano_slp(quant) -> bytes:
 
 
 def eruption_slp(quant, frames: int = ERUPTION_FRAMES) -> bytes:
-    """The eruption: `frames` pictures of the volcano throwing up lava, one direction."""
+    """Boiling over: `frames` pictures of the cauldron throwing up brew, one direction."""
     key = ("erupt", np.asarray(quant.palette).tobytes(), frames)
     if key not in _SLPS:
         _SLPS[key] = slp.encode(_building_frames([volcano(k / frames) for k in range(frames)], quant))
@@ -223,7 +219,7 @@ def eruption_slp(quant, frames: int = ERUPTION_FRAMES) -> bytes:
 
 
 def bomb_slp(quant, frames: int = BOMB_FRAMES) -> bytes:
-    """The lava bomb: `frames` pictures of it tumbling, one direction, no shadow (it is in the air)."""
+    """The brew bomb: `frames` pictures of it tumbling, one direction, no shadow (it is in the air)."""
     key = ("bomb", np.asarray(quant.palette).tobytes(), frames)
     if key not in _SLPS:
         from .export import render_frames
@@ -232,40 +228,41 @@ def bomb_slp(quant, frames: int = BOMB_FRAMES) -> bytes:
 
 
 def crater() -> tuple[float, float, float]:
-    """Where its bombs leave it (tiles across, forward and up): its crater."""
+    """Where its bombs leave it (tiles across, forward and up): the cauldron's rim."""
     from .export import BASE_SCALE
     from .gameplay import HEIGHT_PIXELS
-    return 0.0, 0.0, round((POOL + 1) * V.BLOCK * math.cos(math.radians(30)) * BASE_SCALE / HEIGHT_PIXELS, 2)
+    return 0.0, 0.0, round(RIM_Z * math.cos(math.radians(30)) * BASE_SCALE / HEIGHT_PIXELS, 2)
 
 
 # --------------------------------------------------------------------------- its icon
 
-ICON_COLOURS = {0: (24, 22, 30), 1: (62, 56, 58), 2: (38, 34, 36), 3: (255, 122, 16), 4: (255, 214, 74),
-                5: (200, 56, 12), 6: (120, 116, 120), 7: (170, 166, 168)}
+ICON_COLOURS = {0: (30, 20, 40), 1: (40, 38, 46), 2: (16, 14, 20), 3: (90, 220, 80), 4: (200, 255, 140),
+                5: (240, 120, 30), 6: (120, 160, 130), 7: (200, 196, 180)}
 
 
 def icon(size: int = 36) -> np.ndarray:
-    """A building icon (drawn at 36x36, scaled to `size`): the volcano erupting against a night sky, lava running
-    down it into a sea of lava. Colours are keys of ICON_COLOURS."""
-    sky, rock, dark, lava, glow, red, smoke, light = range(8)
+    """A building icon (drawn at 36x36, scaled to `size`): the cauldron boiling over against a night sky, green brew
+    spilling, fire under it. Colours are keys of ICON_COLOURS."""
+    sky, iron, dark, brew, glow, fire, fumes, bone = range(8)
     px = np.full((36, 36), sky, np.int16)
-    for y in range(36):  # the cone
-        half = max(0, (y - 11) * 0.62)
-        x0, x1 = int(round(18 - half)), int(round(18 + half))
-        if y >= 11:
-            px[y, max(0, x0):min(36, x1 + 1)] = rock
-            px[y, max(0, x0):min(36, x0 + 3)] = dark
-    px[30:36, :] = lava  # the lava sea
-    px[33:36:2, 2:36:5] = glow
-    px[11:14, 14:23] = lava  # the crater
-    for y in range(13, 31):  # lava running down
-        px[y, 18 + (y - 13) // 3] = lava
-        px[y, 17 - (y - 13) // 5] = red
-    for y, x in ((8, 18), (6, 15), (5, 21), (3, 17), (7, 23), (9, 12), (4, 25)):  # thrown up
-        px[y:y + 2, x:x + 2] = glow if (x + y) % 2 else lava
-    px[0:4, 6:13] = smoke
-    px[1:5, 22:31] = smoke
-    px[1:3, 8:11] = light
+    yy, xx = np.mgrid[0:36, 0:36]
+    pot = ((xx - 18) / 14.0) ** 2 + ((yy - 22) / 11.0) ** 2 < 1
+    px[pot & (yy >= 15)] = iron
+    px[pot & (yy >= 15) & (xx < 12)] = dark
+    px[15:17, 4:32] = iron
+    px[13:16, 6:30] = brew
+    px[12:14, 9:14] = glow
+    px[11:13, 20:24] = glow
+    px[32:36, 8:28] = fire
+    px[33:36, 12:24] = glow
+    px[30:36, 2:6] = dark
+    px[30:36, 30:34] = dark
+    for y, x in ((7, 17), (4, 13), (5, 22), (2, 18), (8, 10), (6, 26)):
+        px[y:y + 2, x:x + 2] = brew if (x + y) % 2 else glow
+    px[0:4, 3:10] = fumes
+    px[0:3, 26:33] = fumes
+    px[20:23, 3:6] = bone
+    px[20:23, 30:33] = bone
     if size != 36:
         idx = np.arange(size) * 36 // size
         px = px[idx][:, idx]
@@ -273,7 +270,7 @@ def icon(size: int = 36) -> np.ndarray:
 
 
 def add_icon(data: bytes, index: int, quant) -> tuple[Optional[bytes], str]:
-    """A building icon sheet with the volcano's icon added as icon `index` (blank icons fill any gap before it)."""
+    """A building icon sheet with the cauldron's icon added as icon `index` (blank icons fill any gap before it)."""
     try:
         info = slp.info(data)
     except ValueError as exc:
@@ -293,7 +290,7 @@ def add_icon(data: bytes, index: int, quant) -> tuple[Optional[bytes], str]:
         px = full
     blank = slp.SlpFrame(np.full((1, 1), slp.TRANSPARENT, np.int16), (0, 0))
     frames = [blank] * (index - info.num_frames) + [slp.SlpFrame(px, (0, 0))]
-    return slp.append_frames(data, frames), f"the volcano is icon {index} ({w}x{h})"
+    return slp.append_frames(data, frames), f"the cauldron is icon {index} ({w}x{h})"
 
 
 def icon_sheets(archives: list[tuple[str, object]]) -> list[tuple[str, object, int, bytes]]:

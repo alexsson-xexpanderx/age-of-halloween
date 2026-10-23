@@ -631,7 +631,7 @@ def test_full_build(tmp: Path):
     tiles, water = slp.decode(out.get(lava_ground.slp)), slp.decode(Drs(game / "Data" / "terrain.drs").get(15002))
     assert len(tiles) == 36 and all(np.array_equal(a.pixels >= 0, b.pixels >= 0) for a, b in zip(tiles, water))
     assert all(c[46].values["placement_terrain"] == (1, 15) for c in units.units)
-    rms = (mod / "Script.RM" / "Team Lava Islands.rms").read_bytes().decode("latin-1")  # in the mod's own maps
+    rms = (mod / "Script.RM" / "Witch Brew Islands.rms").read_bytes().decode("latin-1")  # in the mod's own maps
     assert "#const LAVA 15" in rms and "base_terrain LAVA" in rms and "FISH" not in rms
     assert "Lava: terrain 15 ('Old Water') is lava" in report and "Docks (units 46)" in report
     # the trains: the Trade Cart (128, 204) keeps its row, which now leaves rails behind it on every terrain it goes
@@ -694,12 +694,12 @@ def test_full_build(tmp: Path):
         "Pac-Man", "Create <b>Pac-Man<b> (<cost>)", "Create <b>Pac-Man<b> (<cost>)\nA very fast cheat unit.",
         "UserPatch", "Age of Halloween"]
     assert langdll.read_string(p1, 5706) == "Giant Pac-Man"
-    assert [langdll.read_string(p1, i) for i in (5493, 6493)] == ["Dragon", "Create Dragon"]
-    assert langdll.read_string(p1, 26493).startswith("Create <b> Dragon<b> (<cost>) \nA flying dragon")
-    assert [langdll.read_string(p1, i) for i in (5128, 6128)] == ["Train", "Build Train"]
-    assert langdll.read_string(p1, 26128).startswith("Build <b> Train<b> (<cost>) \nTrades by land, laying its own")
-    assert [langdll.read_string(p1, i) for i in (5785, 6785)] == ["Volcano", "Build Volcano"]
-    assert langdll.read_string(p1, 26785).startswith("Build <b> Volcano<b> (<cost>) \nA volcano on the lava")
+    assert [langdll.read_string(p1, i) for i in (5493, 6493)] == ["Bone Dragon", "Create Bone Dragon"]
+    assert langdll.read_string(p1, 26493).startswith("Create <b> Bone Dragon<b> (<cost>) \nA flying dragon")
+    assert [langdll.read_string(p1, i) for i in (5128, 6128)] == ["Ghost Train", "Build Ghost Train"]
+    assert langdll.read_string(p1, 26128).startswith("Build <b> Ghost Train<b> (<cost>) \nTrades by land, laying its own")
+    assert [langdll.read_string(p1, i) for i in (5785, 6785)] == ["Cauldron", "Build Cauldron"]
+    assert langdll.read_string(p1, 26785).startswith("Build <b> Cauldron<b> (<cost>) \nA witch's cauldron on the brew")
     assert langdll.read_string(p1_before, 5860) == "Furious the Monkey Boy"
     assert langdll.read_string((game / "language_x1.dll").read_bytes(), 5860) == "Furious the Monkey Boy"
     assert not (mod / "Data" / "language_x1.dll").exists()
@@ -888,17 +888,17 @@ def test_direct_mode_and_restore(tmp: Path):
     assert langdll.read_string((game / "language_x1_p1.dll").read_bytes(), 5860) == "Pac-Man"
     base = (game / "language.dll").read_bytes()  # nothing of his in it; the dragon's name and button where they fit
     assert [langdll.read_string(base, i) for i in (5079, 5493, 6493, 26493)] == [
-        "Militia", "Dragon", "Create Dragon", "Create Dragon"]  # its long help does not fit: the button's text
-    assert [langdll.read_string(base, i) for i in (5128, 6128)] == ["Train", "Build Train"]  # its help fits
-    assert langdll.read_string(base, 26128).startswith("Build <b> Train<b> (<cost>) \nTrades by land, laying its own")
+        "Militia", "Bone Dragon", "not used 6493", "not used #26493"]  # only the name fits in place
+    assert [langdll.read_string(base, i) for i in (5128, 6128)] == ["Trade Cart", "Build Trade Cart"]  # too long
+    assert langdll.read_string(base, 26128).startswith("Build <b> Ghost Train<b> (<cost>) \nTrades by land, laying its own")
     icons = slp.decode(Drs(game / "Data" / "interfac.drs").get(50730))
     assert len(icons) == 173  # Pac-Man's, the giant's and the dragon's icons added, not three per build
     assert Drs(game / "Data" / "interfac.drs").get(51141) != panel_before  # the panel too, in the same file
     assert Drs(game / "Data" / "gamedata_x1_p1.drs").ids("wav") == {15500} | set(range(15502, 15522))
-    assert (game / "Random" / "Team Lava Islands.rms").exists()  # the map, where the game lists custom maps
+    assert (game / "Random" / "Witch Brew Islands.rms").exists()  # the map, where the game lists custom maps
     (game / "Random" / "Mine.rms").write_text("a map of the player's own")
     assert build_mod.main(["--game", str(game), "--restore"]) == 0
-    assert not (game / "Random" / "Team Lava Islands.rms").exists() and (game / "Random" / "Mine.rms").exists()
+    assert not (game / "Random" / "Witch Brew Islands.rms").exists() and (game / "Random" / "Mine.rms").exists()
     assert (game / "Data" / "graphics.drs").read_bytes() == before
     assert (game / "Data" / "terrain.drs").read_bytes() == ground_before
     assert (game / "Data" / "empires2_x1_p1.dat").read_bytes() == dat_before
@@ -1045,10 +1045,10 @@ def test_lava_map():
     assert not any(fish in text for fish in ("FISH", "MARLIN", "DORADO", "SALMON", "SNAPPER", "TUNA"))
     assert "Age of Halloween" in text.splitlines()[1] and text.encode("latin-1")
     tex = lava.lava_texture()
-    assert tex.shape == (16, 16, 5) and len(np.unique(tex[..., 0])) >= 4
+    assert tex.shape == (64, 64, 5) and len(np.unique(tex[..., 1])) >= 16
     pal = parse_jasc(fake_palette())  # the red player's shades as plain colours, for the lava only
-    assert Quantiser(pal, lava.SHADES).indices(pal[32:33].astype(int))[0] == 32
-    assert Quantiser(pal).indices(pal[32:33].astype(int))[0] != 32
+    assert Quantiser(pal, lava.SHADES).indices(pal[48:49].astype(int))[0] == 48
+    assert Quantiser(pal).indices(pal[48:49].astype(int))[0] != 48
     assert lava.ground(50, 30).shape == (30, 50, 4) and (lava.ground(50, 30)[..., 3] == 255).all()
 
 
@@ -1068,17 +1068,15 @@ def test_building_sets_differ_in_shape():
 
 
 def test_volcano():
-    """The volcano fits its three tiles, its crater's lava lies below its rim (not on a column above it), lava runs
-    down its sides, and its pictures come in the layout its graphics are given."""
+    """The cauldron (the volcano's slot) fits its three tiles, its brew lies inside its rim where its bombs leave,
+    and its pictures come in the layout its graphics are given."""
     from aoh import volcano as volcanoes
-    from aoh.voxel import tiles_to_blocks
-    s = volcanoes.volcano()
-    lo, hi = s.bounds()
-    assert hi[0] - lo[0] <= tiles_to_blocks(3) + 2 and hi[1] - lo[1] <= tiles_to_blocks(3) + 2  # eaves of rock
-    pool = [z for (x, y, z), (b, _) in s.blocks.items() if b == "lava" and (x, y) in ((3, 3), (4, 4))]
-    rim = max(z for (x, y, z), (b, _) in s.blocks.items() if b == volcanoes.RIM)
-    assert pool and max(pool) == volcanoes.POOL < rim  # a pool in the crater, below its rim
-    assert sum(1 for (x, y, z), (b, _) in s.blocks.items() if b == "lava" and z < volcanoes.HEIGHT // 2) >= 4
+    from aoh import sculpt as S
+    from aoh.geometry import Pose
+    items = S._items(volcanoes.volcano(), Pose(), -45.0)
+    pts = np.concatenate([S._world_corners(it, M) for it, M in items])
+    assert np.ptp(pts[:, 0]) <= 3 * 48 + 16 and np.ptp(pts[:, 1]) <= 3 * 48 + 16  # three tiles, rocks spilling a bit
+    assert volcanoes.crater()[2] > 0 and volcanoes.RIM_Z < pts[:, 2].max()
     quant = Quantiser(parse_jasc(fake_palette()))
     assert [slp.info(f(quant)).num_frames for f in (volcanoes.volcano_slp, volcanoes.eruption_slp,
                                                      volcanoes.bomb_slp)] == [1, volcanoes.ERUPTION_FRAMES,

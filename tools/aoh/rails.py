@@ -51,12 +51,12 @@ TRACK_FADING = 2  # the last pictures, fainter and fainter
 TRACK_PROPERTIES = 16  # each frame's properties, as in the cart tracks' own SLP
 TRACK_SPACING = 4  # how often a piece is left (the cart tracks' "replication")
 TRACK_LENGTH = 0.6 * TILE  # one piece, behind the train: longer than the cart tracks', so the next one overlaps it
-TEXTS = {"name": "Train", "creation": "Build Train",
-         "help": "Build <b> Train<b> (<cost>) \nTrades by land, laying its own rails as it goes: carries goods from "
+TEXTS = {"name": "Ghost Train", "creation": "Build Ghost Train",
+         "help": "Build <b> Ghost Train<b> (<cost>) \nTrades by land, laying its own rails as it goes: carries goods from "
                  "your Market to another player's Market and brings back gold. The farther the Market, the higher "
-                 "your profit. To trade, click the Train, then right-click an allied or neutral Market. <i> Upgrades: "
+                 "your profit. To trade, click the Ghost Train, then right-click an allied or neutral Market. <i> Upgrades: "
                  "more resistant to Monks (Monastery).<i> \n<hp> <attack> <armor> <piercearmor> <range>"}
-SHORT_HELP = "Build <b> Train<b> (<cost>) \nTrades by land, laying its own rails."
+SHORT_HELP = "Build <b> Ghost Train<b> (<cost>) \nTrades by land, laying its own rails."
 
 
 # --------------------------------------------------------------------------- the look

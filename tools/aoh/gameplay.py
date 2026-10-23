@@ -404,9 +404,9 @@ def giant_slp(quant) -> bytes:
 # applied by no research.
 DRAGON = 493
 DRAGON_SHOTS = (508, 520)
-DRAGON_TEXTS = {"name": "Dragon", "creation": "Create Dragon",
-                "help": "Create <b> Dragon<b> (<cost>) \nA flying dragon that spits fire. It flies over land and "
-                        "water. \n<hp> <attack> <armor> <piercearmor> <range>"}
+DRAGON_TEXTS = {"name": "Bone Dragon", "creation": "Create Bone Dragon",
+                "help": "Create <b> Bone Dragon<b> (<cost>) \nA flying dragon's skeleton that breathes green fire. It "
+                        "flies over land and water. \n<hp> <attack> <armor> <piercearmor> <range>"}
 DRAGON_COST = (0, 300, 1, 3, 300, 1, 4, 1, 0)  # 300 food, 300 gold, 1 population
 DRAGON_TIME = 120  # seconds
 DRAGON_BUTTON = 2  # next to Pac-Man's
