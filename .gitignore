@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+aoh_build_log.txt
+showcase/

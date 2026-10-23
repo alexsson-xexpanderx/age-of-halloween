@@ -1,0 +1,2 @@
+# the .bat files are double-clicked on Windows: keep their CRLF line endings exactly
+*.bat -text

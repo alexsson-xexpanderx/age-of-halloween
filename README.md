@@ -1,0 +1,123 @@
+# Age of Halloween
+
+A mod for **Age of Empires II: Gold Edition** that replaces the units and
+buildings with blocky, pixel-art Minecraft-style ones. There are villagers in
+robes, diamond-armoured champions, skeleton archers, pillager crossbowmen and
+snow-golem skirmishers. Knights ride horses in Minecraft horse armour. Ravagers
+serve as battering rams, dispenser minecarts as mangonels, and a TNT cannon as
+the bombard. Creepers are the petards, and the fleet sails under team-coloured
+wool. All 90 units are modelled, and every building too: houses, town centers,
+castles, walls and gates in five Minecraft village styles that upgrade with
+each age, the eighteen wonders, wheat farms, and the whole map (forests, gold
+and stone, berry bushes, animals, fish and decorations). Even the panels at the
+top and bottom of the screen look like Minecraft's inventory. And easter
+eggs: build a Wonder and it trains Pac-Man, and a dragon that spits fire.
+
+![battle](previews/battle.png)
+
+The sprites are generated, not hand-drawn. Each unit is a Minecraft-style box
+model and each building a grid of blocks. A small renderer draws them from
+AoE2's isometric camera, in all directions and animation frames, with
+team-colour regions ready for the game palette.
+
+See [docs/DESIGN.md](docs/DESIGN.md) for the art direction and the path into
+the game, and [docs/UNITS.md](docs/UNITS.md) for the full unit list.
+
+## Try it in your game
+
+You need AoE2: The Conquerors with UserPatch 1.5, and Python 3.
+Double-click **`build_mod.bat`** (it finds your game or asks for the folder),
+then double-click **Age of Halloween** on your desktop. The build reads your own
+game files and makes Age of Halloween a game of its own (a UserPatch mod with
+its own `age_of_halloween.exe` and a villager king icon), so your normal game
+stays untouched. Full steps and options are in [docs/INSTALL.md](docs/INSTALL.md).
+
+## Previews
+
+```sh
+pip install -r tools/requirements.txt
+python tools/concept_sheet.py        # writes previews/* and docs/UNITS.md
+```
+
+| File | Shows |
+|---|---|
+| `previews/roster_<group>.png` | every unit of a group in the 5 stored directions (civilians, infantry, cavalry, siege, ships, uniques, animals) |
+| `previews/anim_<group>.gif` | walk, attack, work and death cycles for each group |
+| `previews/battle.png` | siege and cavalry storming a town |
+| `previews/harbor.png` | the fleet off the coast |
+| `previews/scene.png` | two armies at in-game size |
+| `previews/village.png` | a Dark Age village with fields, a forest and mines |
+| `previews/buildings.png` | every building in the five village styles and the ages |
+| `previews/fortifications.png` | walls, gates, towers and castles |
+| `previews/walls.png` | wall lines in every direction and with corners, placed as the game places them |
+| `previews/wonders.png` | the eighteen wonders and the scenario monuments |
+| `previews/nature.png` | trees, resources and map decorations |
+| `previews/farms.png` | farms, which the game draws as ground: being built, grown and exhausted |
+| `previews/interface.png` | the resource bar and bottom panel in the Minecraft style, on a stand-in for the game's own panel |
+| `previews/menu.png` | the main menu: a block village on a clear day, with the game's texts and buttons drawn over it |
+| `previews/screens.png` | the other screens as the deepslate hall, and the loading screen, on stand-in screens |
+| `previews/player_colors.png` | a unit in all 8 player colours |
+| `previews/roster_easter.png` | the easter eggs: Pac-Man, a ghost and a blocky Cobra Car in the cheat units' slots, and the Wonder's Dragon |
+| `previews/giant.png` | the "to smithereens" cheat's giant red Pac-Man by a Castle, a Wonder, Pac-Man and a knight |
+| `previews/lava.png` | Team Lava Islands: an island's beach with a Dock, and ships on the lava |
+| `previews/rails.png` | trains between two Markets, round a wood, on the rails they lay as they go |
+| `previews/sounds/pacman_*.wav` | Pac-Man's sounds: clicking on him, orders, training, bites and his death |
+| `previews/sounds/dragon_*.wav` | the Dragon's sounds: growls, wing beats, roars, its fire and its death |
+
+## Layout
+
+```
+tools/aoh/textures.py    pixel-art texture helpers (ASCII-art faces, noise, team colour)
+tools/aoh/geometry.py    box models: parts, pivots, held items as extruded sprites
+tools/aoh/render.py      isometric ray-caster -> palette-agnostic frames
+tools/aoh/animation.py   rigs and attack styles: stand / walk / attack / die / carry poses
+tools/aoh/items.py       held items: swords, tools, bows, crossbows, tridents, firework gun...
+tools/aoh/units.py       biped builder, mob looks, foot units, villagers and their jobs
+tools/aoh/mounted.py     horses, donkeys, zombie horses, llamas and their riders
+tools/aoh/siege.py       ravagers, dispenser carts, crossbow turrets, TNT cannon, trebuchet, wagons
+tools/aoh/ships.py       boats and warships with team sails
+tools/aoh/animals.py     sheep, chicken, goat, hoglin, pig, wolf, ocelot, phantom, parrot, fish, dolphin
+tools/aoh/roster.py      the full roster and preview groups
+tools/aoh/blocks.py      Minecraft block textures (woods, stones, ores, glass, leaves, workstations)
+tools/aoh/voxel.py       block structures: shapes (stairs, slabs, fences, walls, panes), roofs, domes
+tools/aoh/styles.py      the five building sets' materials per age
+tools/aoh/architecture.py  how each set builds: platforms, walls, roofs, doors and towers
+tools/aoh/structures.py  houses, town center, mill, camps, barracks, range, stable, market, dock...
+tools/aoh/fortifications.py  walls, gates, towers and castles
+tools/aoh/wonders.py     the eighteen wonders and scenario monuments
+tools/aoh/nature.py      trees, stumps, mines, berry bushes, rocks and plants
+tools/aoh/gaia.py        map decorations: yurts, ruins, graves, flags, torches, the relic
+tools/aoh/farmland.py    farms, which are terrain: Minecraft farmland and wheat in terrain.drs
+tools/aoh/lava.py        the lava (the unused terrain 15), Docks on it, and the Team Lava Islands map
+tools/aoh/rails.py       trains laying their own rails: a track left behind them on the ground (an unused graphic)
+tools/aoh/volcano.py     volcanoes Villagers build on the lava by the beach, erupting at enemies (the unused Sea Tower)
+tools/aoh/interface.py   the screen panels repainted: planks, inventory grey, slots and item icons
+tools/aoh/menu.py        the main menu: a block village by day, every button a Minecraft thing, names on Minecraft buttons
+tools/aoh/screens.py     the other screens: found by their screen files, redrawn as the deepslate hall
+tools/aoh/loadscreen.py  the loading screen: the logo, open sky and a floating block island, in a palette of its own
+tools/aoh/props.py       renders buildings and scenery in the original sprite's frame layout
+tools/aoh/slp.py         SLP 2.0N sprite encoder/decoder
+tools/aoh/drs.py         DRS archive reader/writer
+tools/aoh/palette.py     game palette and colour matching
+tools/aoh/datfile.py     graphics and terrain table reader for empires2_x1_p1.dat
+tools/aoh/datunits.py    reads and patches the civilisations' unit tables in the .dat
+tools/aoh/gameplay.py    Pac-Man and the Dragon at the Wonder: the .dat changes, icons, names and sounds
+tools/aoh/langdll.py     reads and changes strings in the game's language DLLs
+tools/aoh/pe.py          Windows DLL/exe resources: read them, give a copy new ones in an added section
+tools/aoh/appicon.py     the villager king icon: the .ico file, and in place in the mod's own exe (and PNGs)
+tools/aoh/sounds.py      Pac-Man's sounds, synthesised in an 8-bit arcade style
+tools/aoh/roars.py       the Dragon's sounds: roars, growls, wing beats and fire, synthesised
+tools/aoh/easter.py      Pac-Man, the ghost, the Cobra Car, the giant red Pac-Man and the Dragon
+tools/aoh/slpmap.py      which original sprite id each unit render replaces
+tools/aoh/spritemap.py   finds buildings, walls, trees and decorations by name in the .dat
+tools/aoh/export.py      renders an animation in the original sprite's frame layout
+tools/build_mod.py       builds the mod from your game files (build_mod.bat on Windows)
+tools/concept_sheet.py   preview generator
+tools/tests/             format round trips and a full build against a fake game folder
+```
+
+## Status
+
+All 90 units, every building in all five styles and ages, walls and gates,
+the wonders, the farms, and the map's nature and animals are modelled and
+exported. The next step is testing them together in the game.
