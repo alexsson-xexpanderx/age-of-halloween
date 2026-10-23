@@ -50,7 +50,7 @@ def _skull_material(glow=P.hexrgb("#9cff6a"), seed: int = 0) -> S.Material:
     def glow_f(look):
         return socket(look.p)[1].astype(float)
 
-    return S.Material(color=color, glow=glow_f, shine=0.2, gloss=12)
+    return S.Material(color=color, glow=glow_f, shine=0.2, gloss=12, vivid=0.5)
 
 
 def _jaw_material(seed: int = 0) -> S.Material:
@@ -63,7 +63,7 @@ def _jaw_material(seed: int = 0) -> S.Material:
         gaps = teeth & (np.abs(np.sin(p[:, 0] * 3.2)) < 0.25)
         line = (np.abs(p[:, 2] + 0.15) < 0.12) & (p[:, 1] > 0.3)
         return np.where((gaps | line)[:, None], P.hexrgb("#2a1c1c"), c)
-    return S.Material(color=color, shine=0.2, gloss=12)
+    return S.Material(color=color, shine=0.2, gloss=12, vivid=0.5)
 
 
 def _ribs_material(seed: int = 0) -> S.Material:
@@ -77,7 +77,7 @@ def _ribs_material(seed: int = 0) -> S.Material:
         sternum = (np.abs(p[:, 0]) < 0.6) & (p[:, 1] > 0)
         dark = band & ~sternum
         return np.where(dark[:, None], P.hexrgb("#2b1f26"), c)
-    return S.Material(color=color, shine=0.15, gloss=10)
+    return S.Material(color=color, shine=0.15, gloss=10, vivid=0.5)
 
 
 @dataclass

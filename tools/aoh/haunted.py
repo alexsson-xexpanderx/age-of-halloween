@@ -139,8 +139,8 @@ def victorian_house(age: int = 2, variant: int = 0, seed: int = 0) -> Part:
     """A crooked haunted cottage: painted clapboard on a stone base, a steep shingled gable roof with iron cresting,
     a witch-hat turret at the corner, a leaning chimney, lit gothic windows and jack-o'-lanterns by the door."""
     rng = np.random.default_rng(seed + variant)
-    paint_rgb = [P.hexrgb("#6c6378"), P.hexrgb("#5d6a6e"), P.hexrgb("#76606a")][variant % 3]
-    wall = siding(paint_rgb, seed=seed)
+    paint_rgb = [P.hexrgb("#5a5462"), P.hexrgb("#4c5658"), P.hexrgb("#5e4c54")][variant % 3]
+    wall = siding(paint_rgb, peel=0.9, seed=seed)
     base = P.bricks(P.hexrgb("#7d7884"), P.hexrgb("#4f4a58"), w=4.5, h=2.2, moss=0.9, seed=seed)
     roof = P.shingles(P.hexrgb("#4a3560"), P.hexrgb("#251a33"), seed=seed, axes=(0, 2))
     dark_wood = P.wood(P.hexrgb("#3c2a24"), P.hexrgb("#1f1512"), along=2)

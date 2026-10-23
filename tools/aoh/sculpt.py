@@ -29,13 +29,18 @@ from .render import (LIGHT, OUTLINE, PLAYER, SHADOW, SOLID, SUN, TRANSPARENT, Ca
                      _NORMAL, _slabs, _uv, model_matrix)
 
 SAMPLES = 3  # samples per pixel along each axis
-KEY = LIGHT  # the warm key light: upper left, in front
-KEY_RGB = np.array([1.0, 0.93, 0.80])
-SKY_RGB = np.array([0.50, 0.46, 0.70])  # the fill from above: a dusky purple sky
-GROUND_RGB = np.array([0.36, 0.30, 0.24])  # the fill from below: warm earth
-RIM_RGB = np.array([0.55, 0.75, 0.80])  # moonlight on the far edges
-WRAP = 0.35  # how far the key light wraps round (soft, cartoon-like)
-INK = np.array([0.10, 0.06, 0.09])  # the outline colour: a very dark purple-brown
+# the mood: dark and creepy (the player chose it over a brighter cartoon). A cold moon for the key light, a dim
+# dusky sky, an eerie green rim, colours muted and grimy towards the ground; what glows is untouched, so eyes,
+# candles and windows burn out of the dark
+KEY = LIGHT  # the key light: upper left, in front
+KEY_RGB = np.array([0.96, 0.93, 0.90]) * 0.85  # moonlight (near white: a blue cast turns orange brown)
+SKY_RGB = np.array([0.35, 0.33, 0.39])  # the fill from above: a dusky sky
+GROUND_RGB = np.array([0.22, 0.19, 0.16])  # the fill from below: dark earth
+RIM_RGB = np.array([0.42, 0.78, 0.60])  # a sickly green glow on the far edges
+WRAP = 0.2  # how far the key light wraps round
+MUTE = 0.28  # how much colour is drained (0 none, 1 grey)
+GRIME = 0.30  # how much darker things get at their feet
+INK = np.array([0.06, 0.04, 0.06])  # the outline colour: almost black
 INK_DEPTH = 1.6  # model units: a depth step at least this big gets an ink line
 INF = np.inf
 
@@ -64,6 +69,7 @@ class Material:
     gloss: float = 24.0  # specular tightness
     bump: Optional[Callable[[Look], np.ndarray]] = None  # perturbed local normals
     cut: Optional["Material"] = None  # what a clip plane's face shows (the inside), default: this material
+    vivid: float = 0.0  # 1 keeps all its colour in the dark mood (pumpkins), 0 is drained like the rest
 
     def evaluate(self, look: Look):
         n = len(look.p)
@@ -477,7 +483,7 @@ def _light(nw: np.ndarray, view: np.ndarray, shine: np.ndarray, gloss: np.ndarra
     k = k * k * (3 - 2 * k)  # soft but with a clear turn from light to shade
     up = 0.5 + 0.5 * nw[:, 2]
     fill = GROUND_RGB[None] * (1 - up[:, None]) + SKY_RGB[None] * up[:, None]
-    occl = 0.78 + 0.22 * np.clip(z / 6.0, 0, 1)  # a little darker near the ground
+    occl = (1 - GRIME) + GRIME * np.clip(z / 10.0, 0, 1)  # darker towards the ground
     diffuse = (fill * 0.62 + KEY_RGB[None] * k[:, None] * 0.78) * occl[:, None]
     facing = np.clip(nw @ view, 0, 1)
     rim = (1 - facing) ** 3 * np.clip(0.4 - nw @ KEY, 0, 1) * 0.9
@@ -564,12 +570,17 @@ def render(root, heading: float, pose: Pose = None, camera: Camera = None, shado
             nw = nw / (np.linalg.norm(nw, axis=1, keepdims=True) + 1e-12)
             shine = np.full(len(rows), m.shine)
             gloss = np.full(len(rows), m.gloss)
+            vivid = m.vivid
         else:
             base, nw = box_rgb[rows], normal[rows]
             glow, team = np.zeros(len(rows)), box_team[rows]
             shine, gloss = np.zeros(len(rows)), np.full(len(rows), 8.0)
+            vivid = 0.0
         diffuse, add, lit = _light(nw, view, shine, gloss[0] if len(gloss) else 8.0, world_z[rows])
         col = base * diffuse + add
+        grey = col @ np.array([0.3, 0.55, 0.15])
+        mute = MUTE * (1 - vivid)
+        col = col * (1 - mute) + grey[:, None] * mute  # drained of colour (not what glows: see below)
         col = col * (1 - glow[:, None]) + base * glow[:, None]
         rgb[rows] = np.clip(col, 0, 1)
         lum = base @ np.array([0.3, 0.55, 0.15])

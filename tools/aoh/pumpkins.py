@@ -77,7 +77,7 @@ def face_material(features, base=P.PUMPKIN, dark=P.PUMPKIN_DARK, rot=0.0, seed=0
         k = carve(look)
         return P.mix(c, glow, k)
 
-    return S.Material(color=color, glow=carve, bump=skin.bump, shine=skin.shine, gloss=skin.gloss)
+    return S.Material(color=color, glow=carve, bump=skin.bump, shine=skin.shine, gloss=skin.gloss, vivid=skin.vivid)
 
 
 def inside(radius: float, glow=P.CANDLE) -> S.Material:
@@ -143,7 +143,7 @@ def _stem(top: float, height: float, lean: float, thickness: float, leaf_team: b
 class PumpkinLook:
     base: np.ndarray = dataclasses.field(default_factory=lambda: P.PUMPKIN)
     dark: np.ndarray = dataclasses.field(default_factory=lambda: P.PUMPKIN_DARK)
-    rot: float = 0.0
+    rot: float = 0.15
     glow: np.ndarray = dataclasses.field(default_factory=lambda: P.CANDLE)
     eyes: tuple = (((11, 34), (46, 52), (30, 12)),)  # the right eye; mirrored for the left
     nose: tuple = ()

@@ -18,14 +18,14 @@ def hexrgb(h: str) -> np.ndarray:
     return np.array([int(h[i:i + 2], 16) for i in (0, 2, 4)], float) / 255
 
 
-PUMPKIN = hexrgb("#f07a12")
-PUMPKIN_DARK = hexrgb("#b2470a")
+PUMPKIN = hexrgb("#d8701a")
+PUMPKIN_DARK = hexrgb("#7e340c")
 PUMPKIN_ROT = hexrgb("#6e5a1c")
 STEM = hexrgb("#5a6b2a")
 CANDLE = hexrgb("#ffc23a")  # the glow inside a jack-o'-lantern
 EMBER = hexrgb("#ff7a1a")
-BONE = hexrgb("#e8dcc0")
-BONE_DARK = hexrgb("#a89878")
+BONE = hexrgb("#e2cf9e")
+BONE_DARK = hexrgb("#86704a")
 GHOST = hexrgb("#d8f0ec")
 SLIME = hexrgb("#7cd23a")
 WITCH_GREEN = hexrgb("#6fae4a")
@@ -134,7 +134,7 @@ def pumpkin(ribs: int = 10, base=PUMPKIN, dark=PUMPKIN_DARK, rot: float = 0.0, s
         n = n + tangent * d[:, None]
         return n / (np.linalg.norm(n, axis=1, keepdims=True) + 1e-12)
 
-    return Material(color=color, glow=glow, bump=bump, shine=0.25, gloss=18)
+    return Material(color=color, glow=glow, bump=bump, shine=0.25, gloss=18, vivid=0.7)
 
 
 def wood(base=WOOD, dark=WOOD_DARK, along: int = 2, scale: float = 0.7, seed: int = 0, planks: float = 0.0
@@ -215,8 +215,9 @@ def shingles(base=PURPLE, dark=PURPLE_DARK, w: float = 2.2, h: float = 1.6, seed
 
 def bone(seed: int = 0) -> Material:
     def color(l: Look):
-        return mix(BONE, BONE_DARK, 0.15 + 0.5 * fbm(l.p, 1.2, seed) ** 2)
-    return Material(color=color, shine=0.2, gloss=12)
+        stain = np.clip((fbm(l.p, 2.5, seed + 3) - 0.5) * 2.5, 0, 1)  # old, dirty bone
+        return mix(mix(BONE, BONE_DARK, 0.15 + 0.5 * fbm(l.p, 1.2, seed) ** 2), hexrgb("#3e3428"), stain * 0.6)
+    return Material(color=color, shine=0.2, gloss=12, vivid=0.5)
 
 
 def bark(base=hexrgb("#4a3a40"), dark=hexrgb("#221a20"), seed: int = 0) -> Material:
