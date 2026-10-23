@@ -9,11 +9,11 @@ from .mounted import MOUNTED
 from .ships import SHIPS
 from .siege import SIEGE
 from .units import FOOT, Unit
-from . import cavalry, engines, ghostships, infantry, pumpkins
+from . import beasts, cavalry, engines, ghostships, infantry, pumpkins
 
 # the Halloween models made so far, under the keys of the Minecraft ones they replace (the rest are still those)
 HALLOWEEN: dict[str, Callable[[], Unit]] = {
-    **infantry.FOOT, **cavalry.MOUNTED, **engines.SIEGE, **ghostships.SHIPS,
+    **infantry.FOOT, **cavalry.MOUNTED, **engines.SIEGE, **ghostships.SHIPS, **beasts.ANIMALS, **beasts.EASTER,
     "pacman": pumpkins.pacman,  # (the giant is drawn by gameplay.giant_slp, from pumpkins.giant_pacman)
 }
 

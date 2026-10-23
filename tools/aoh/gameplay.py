@@ -560,7 +560,7 @@ def fireball_slp(quant, frames: int, angles: int, mirroring: bool) -> bytes:
     """The fireball's SLP, laid out as its graphic says: a fire charge tumbling, with no shadow (it is in the air)."""
     key = (np.asarray(quant.palette).tobytes(), frames, angles, bool(mirroring))
     if key not in _FIRE_SLPS:
-        from .easter import fireball
+        from .beasts import green_fireball as fireball
         from .export import render_frames
         _FIRE_SLPS[key] = slp.encode(render_frames(fireball(), "idle", frames, angles, mirroring, quant,
                                                    shadow=False))

@@ -45,7 +45,7 @@ def _flames(points, size, colour, seed=0) -> list:
     return out
 
 
-def steed(kind: str, seed: int = 0, barding: Optional[str] = None) -> Part:
+def steed(kind: str, seed: int = 0, barding: Optional[str] = None, saddle: bool = True) -> Part:
     """A steed facing +y, its back at about z 16."""
     if kind == "bonehorse":
         skin = P.bone(seed)
@@ -75,8 +75,9 @@ def steed(kind: str, seed: int = 0, barding: Optional[str] = None) -> Part:
         if camel:
             body_shapes += [S.ball((0, -1.0, back + 1.6), (3.2, 4.0, 3.8), skin)]
     # saddle and blanket in the owner's colour
-    body_shapes += [S.ball((0, -1.5, back + 1.4 + (2.6 if camel else 0)), (4.0, 3.6, 1.2), C.team_cloth(0.55, seed))
-                    .clip((0, 0, -1), -(back + 0.8 + (2.6 if camel else 0)))]
+    if saddle:
+        body_shapes += [S.ball((0, -1.5, back + 1.4 + (2.6 if camel else 0)), (4.0, 3.6, 1.2), C.team_cloth(0.55, seed))
+                        .clip((0, 0, -1), -(back + 0.8 + (2.6 if camel else 0)))]
     if barding == "plate":
         plate = P.metal(P.hexrgb("#3a363e"), rust=0.4, seed=seed, shine=0.7)
         body_shapes += [S.ball((0, 5.0, back - 2.0), (4.9, 4.4, 4.0), plate).clip((0, 0, 1), back + 0.5)]
