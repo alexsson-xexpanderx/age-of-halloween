@@ -382,19 +382,18 @@ def giant_slp(quant) -> bytes:
     in the palette's red team shades, whoever owns him."""
     key = np.asarray(quant.palette).tobytes()
     if key not in _GIANT_SLPS:
-        from dataclasses import replace
-        from .easter import RED_TEAM, giant_pacman
+        from .easter import RED_TEAM
         from .export import render_frames
+        from .pumpkins import giant_pacman
         unit = giant_pacman()
-        # drawn at half size, every pixel then doubled: his blocks are dozens of pixels wide anyway, and it is four
-        # times less to draw
-        frames = render_frames(replace(unit, scale=unit.scale / 2), "idle", 1, 8, True, quant)
+        # drawn at full size: the smooth pumpkin would look blocky drawn small and enlarged
+        frames = render_frames(unit, "idle", 1, 8, True, quant)
         out = []
         for f in frames:
-            px = f.pixels.repeat(2, 0).repeat(2, 1)
-            team = px >= slp.PLAYER
+            px = f.pixels.copy()
+            team = px >= slp.PLAYER  # (the pumpkin has no team colour; kept for any that is added)
             px[team] = RED_TEAM + (px[team] - slp.PLAYER)
-            out.append(slp.SlpFrame(px, (f.hotspot[0] * 2, f.hotspot[1] * 2)))
+            out.append(slp.SlpFrame(px, f.hotspot))
         _GIANT_SLPS[key] = slp.encode(out)
     return _GIANT_SLPS[key]
 

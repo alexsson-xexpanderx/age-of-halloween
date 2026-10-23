@@ -11,7 +11,8 @@ import numpy as np
 from . import slp
 from .animation import pose
 from .palette import Quantiser
-from .render import OUTLINE, PLAYER, SHADOW, SOLID, TRANSPARENT, Camera, Frame, fit_camera, render
+from .render import OUTLINE, PLAYER, SHADOW, SOLID, TRANSPARENT, Camera, Frame
+from .sculpt import fit_camera, render
 from .units import Unit
 
 BASE_SCALE = 1.5

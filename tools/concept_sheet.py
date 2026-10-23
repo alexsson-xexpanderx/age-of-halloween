@@ -43,7 +43,8 @@ from aoh import rails as rail_map  # noqa: E402
 from aoh.voxel import BUILDING_HEADING  # noqa: E402
 from aoh.colors import PLAYER_COLORS  # noqa: E402
 from aoh.geometry import Pose  # noqa: E402
-from aoh.render import SHADOW, Camera, Frame, fit_camera, render  # noqa: E402
+from aoh.render import SHADOW, Camera, Frame  # noqa: E402
+from aoh.sculpt import fit_camera, render  # noqa: E402
 from aoh.roster import SHEETS, build_all  # noqa: E402
 from aoh.units import Unit  # noqa: E402
 

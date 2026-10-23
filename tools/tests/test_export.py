@@ -572,8 +572,8 @@ def test_full_build(tmp: Path):
     assert giant.name == "COGXX_F1" and giant.slp == 15600  # a free graphic, pointed at his own SLP
     frames = slp.decode(Drs(mod / "Data" / "gamedata_x1_p1.drs").get(15600))
     assert len(frames) == 5 and min(f.pixels.shape[0] for f in frames) > 900  # far bigger than a Wonder
-    team = frames[1].pixels[frames[1].pixels >= 0]
-    assert ((team >= 32) & (team < 40)).mean() > 0.5  # red whoever owns him: the red team's shades, as plain pixels
+    plain = frames[1].pixels[frames[1].pixels >= 0]
+    assert len(plain) > 200_000 and not (frames[1].pixels >= slp.PLAYER).any()  # a pumpkin, the same for everyone
     assert "Giant Pac-Man: the Saboteur" in report
     heads = datunits.read_unit_headers(datunits.decompress((mod / "Data" / "empires2_x1_p1.dat").read_bytes()), units)
     assert [(t[1], t[3], t[4]) for t in heads.tasks[860]] == [(0, 7, -1), (1, 3, 20)]  # the Militia's boarding task

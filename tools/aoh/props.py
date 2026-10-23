@@ -30,7 +30,8 @@ from . import voxel as V
 from .export import _crop, headings
 from .geometry import Part
 from .palette import Quantiser
-from .render import Camera, Frame, fit_camera, render
+from .render import Camera, Frame
+from .sculpt import fit_camera, render
 
 HEADING = V.BUILDING_HEADING
 BUILDINGS = {

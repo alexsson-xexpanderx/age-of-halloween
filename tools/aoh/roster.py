@@ -9,8 +9,15 @@ from .mounted import MOUNTED
 from .ships import SHIPS
 from .siege import SIEGE
 from .units import FOOT, Unit
+from . import pumpkins, undead
 
-ROSTER: dict[str, Callable[[], Unit]] = {**FOOT, **MOUNTED, **SIEGE, **SHIPS, **ANIMALS, **EASTER}
+# the Halloween models made so far, under the keys of the Minecraft ones they replace (the rest are still those)
+HALLOWEEN: dict[str, Callable[[], Unit]] = {
+    "militia": undead.militia, "man_at_arms": undead.man_at_arms,
+    "pacman": pumpkins.pacman,  # (the giant is drawn by gameplay.giant_slp, from pumpkins.giant_pacman)
+}
+
+ROSTER: dict[str, Callable[[], Unit]] = {**FOOT, **MOUNTED, **SIEGE, **SHIPS, **ANIMALS, **EASTER, **HALLOWEEN}
 
 # Preview sheets: (file stem, title, filter)
 SHEETS = [

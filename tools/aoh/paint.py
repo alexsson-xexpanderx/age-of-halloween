@@ -51,22 +51,36 @@ def _hash3(i, j, k, seed):
     return ((h ^ (h >> 16)) & 0xFFFF) / 65535.0
 
 
+LATTICE = 64  # the noise repeats every 64 cells: far beyond any model
+_TABLES: dict[int, np.ndarray] = {}
+
+
+def _table(seed: int) -> np.ndarray:
+    """The noise's random values for one seed, a flat LATTICE^3 table (looked up instead of hashing every point)."""
+    if seed not in _TABLES:
+        i = np.arange(LATTICE, dtype=np.int64)
+        I, J, K = np.meshgrid(i, i, i, indexing="ij")
+        _TABLES[seed] = _hash3(I, J, K, seed).astype(np.float32).ravel()
+    return _TABLES[seed]
+
+
 def noise(p: np.ndarray, scale: float = 1.0, seed: int = 0) -> np.ndarray:
     """Smooth value noise in 0..1 at points p (n, 3), one cell every `scale` units."""
-    q = p / scale
+    q = np.asarray(p, np.float64) / scale
     f = np.floor(q)
-    t = q - f
+    t = (q - f).astype(np.float32)
     t = t * t * (3 - 2 * t)
-    i, j, k = (f[:, 0].astype(np.int64), f[:, 1].astype(np.int64), f[:, 2].astype(np.int64))
-    out = 0.0
-    for dx in (0, 1):
-        wx = t[:, 0] if dx else 1 - t[:, 0]
-        for dy in (0, 1):
-            wy = t[:, 1] if dy else 1 - t[:, 1]
-            for dz in (0, 1):
-                wz = t[:, 2] if dz else 1 - t[:, 2]
-                out = out + wx * wy * wz * _hash3(i + dx, j + dy, k + dz, seed)
-    return out
+    m = LATTICE - 1
+    i, j, k = (f[:, 0].astype(np.int64) & m, f[:, 1].astype(np.int64) & m, f[:, 2].astype(np.int64) & m)
+    table = _table(seed)
+    i1, j1, k1 = (i + 1) & m, (j + 1) & m, (k + 1) & m
+    L2, L = LATTICE * LATTICE, LATTICE
+    tx, ty, tz = t[:, 0], t[:, 1], t[:, 2]
+    c00 = table[i * L2 + j * L + k] * (1 - tz) + table[i * L2 + j * L + k1] * tz
+    c01 = table[i * L2 + j1 * L + k] * (1 - tz) + table[i * L2 + j1 * L + k1] * tz
+    c10 = table[i1 * L2 + j * L + k] * (1 - tz) + table[i1 * L2 + j * L + k1] * tz
+    c11 = table[i1 * L2 + j1 * L + k] * (1 - tz) + table[i1 * L2 + j1 * L + k1] * tz
+    return ((c00 * (1 - ty) + c01 * ty) * (1 - tx) + (c10 * (1 - ty) + c11 * ty) * tx).astype(np.float64)
 
 
 def fbm(p, scale=1.0, seed=0, octaves=3):

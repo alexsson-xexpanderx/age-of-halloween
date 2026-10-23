@@ -496,13 +496,21 @@ def _light(nw: np.ndarray, view: np.ndarray, shine: np.ndarray, gloss: np.ndarra
 
 
 def render(root, heading: float, pose: Pose = None, camera: Camera = None, shadow: bool = True,
-           outline: bool = False, samples: int = SAMPLES, ink: bool = True) -> Frame:
+           outline: Optional[bool] = None, samples: int = SAMPLES, ink: bool = True) -> Frame:
+    """Draw a model. A model of old boxes only (not yet replaced by a Halloween one) is drawn by the old renderer,
+    exactly as before (and as fast)."""
     pose = pose or Pose()
     camera = camera or Camera()
+    items = _items(root, pose, heading)
+    if not any(isinstance(it, Shape) for it, _ in items):
+        from . import render as old
+        return old.render(root, heading, pose, camera, shadow=shadow, outline=True if outline is None else outline)
+    outline = bool(outline)
     S = samples
+    if camera.width * camera.height > 500_000:  # only the giant: at his size 2 x 2 samples smooth the edges as well
+        S = min(S, 2)
     cam = Camera(width=camera.width * S, height=camera.height * S, origin=(camera.origin[0] * S, camera.origin[1] * S),
                  scale=camera.scale * S, elevation=camera.elevation)
-    items = _items(root, pose, heading)
     O, D = cam.rays()
     n = len(O)
     depth = np.full(n, INF)
