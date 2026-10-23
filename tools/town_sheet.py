@@ -71,9 +71,21 @@ def main(whats):
     sets["forts"] = [("Castle", F.castle), ("Keep", lambda s, a: F.watch_tower(s, 3)),
                      ("Watch tower", lambda s, a: F.watch_tower(s, 1)), ("Bombard tower", lambda s, a: F.watch_tower(s, 4)),
                      ("Gate tower", F.gate_tower)]
-    for what in whats or list(sets) + ["sites", "walls"]:
+    for what in whats or list(sets) + ["sites", "walls", "wonders"]:
         t = time.time()
-        if what == "walls":
+        if what == "wonders":
+            from aoh import marvels as M
+            names = {"B": "Britons", "R": "Franks", "H": "Goths", "U": "Teutons", "I": "Vikings", "L": "Celts",
+                     "Y": "Byzantines", "P": "Persians", "S": "Saracens", "T": "Turks", "J": "Japanese",
+                     "Z": "Chinese", "N": "Mongols", "K": "Koreans", "C": "Spanish", "G": "Huns", "A": "Aztecs",
+                     "M": "Mayans"}
+            letters = list(names)
+            rows = [(f"Wonders {i // 6 + 1}", [(names[c], render(M.wonder(c))) for c in letters[i:i + 6]])
+                    for i in range(0, 18, 6)]
+            rows.append(("Monuments", [(n, render(getattr(M, n)())) for n in ("dome_of_the_rock", "small_pyramid",
+                                                                               "large_pyramid", "tower_of_flies")]))
+            size = grid(rows, OUT / "town_wonders.png", "Wonders and monuments", scale=0.6)
+        elif what == "walls":
             from aoh.geometry import Part
             rows = []
             for kind in ("palisade", "stone", "fortified"):
