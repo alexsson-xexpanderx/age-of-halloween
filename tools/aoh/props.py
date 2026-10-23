@@ -51,9 +51,99 @@ def _part(m) -> Part:
 
 # --------------------------------------------------------------------------- the model registry
 
+HALLOWEEN_TREES = {  # forest type -> the trees mixed in it
+    "oak": ("oak", "oak", "dead", "dark_oak", "birch"), "forest": ("oak", "dark_oak", "dead", "birch", "oak"),
+    "pine": ("spruce",), "snow": ("snowy_spruce",), "palm": ("palm", "palm", "dead"),
+    "jungle": ("jungle", "jungle", "cherry"), "bamboo": ("bamboo",),
+}
+HALLOWEEN_BUILDINGS = {"ARRG": "archery_range", "BRKS": "barracks", "STBL": "stable", "MRKT": "market",
+                       "SIWS": "siege_workshop", "DOCK": "dock", "PORT": "dock", "TDWS": "market", "SMIL": "lumber_camp",
+                       "MINE": "mining_camp", "CRCH": "monastery", "RTWC": "town_center"}
+
+
 def build(spec: dict, variant: int = 0, count: int = 1, t: float = 0.0, fit: Optional[dict] = None,
           part: str = None) -> Part:
-    """The model for one frame. `fit` holds the original frame's size (height/width in screen pixels)."""
+    """The model for one frame: Age of Halloween's smooth models (estates, fortress, marvels, wilds)."""
+    from . import estates as E, fortress as FO, marvels as MV, wilds as WL
+    m = spec["model"]
+    style, age = spec.get("style", "W"), spec.get("age", 2)
+    fit = fit or {}
+    part = part or spec.get("part", "all")
+    if m == "building":
+        code = spec["code"]
+        if code == "HOUS":
+            return E.house(style, age, variant)
+        if code == "MILL":
+            return E.mill(style, age, t, part)
+        if code == "BLAC":
+            return E.blacksmith(style, age, t, part)
+        if code == "UNIV":
+            return E.university(style, age, t, part)
+        if code == "CSTL":
+            return FO.castle(style, age)
+        if code == "WCTW":
+            return FO.watch_tower(style, spec["level"])
+        if code == "FARM":
+            return E.farm(spec.get("stage", 1.0 - variant / max(1, count - 1)))
+        return getattr(E, HALLOWEEN_BUILDINGS[code])(style, age)
+    if m == "outpost":
+        return FO.outpost()
+    if m == "wonder":
+        return MV.wonder(spec["letter"])
+    if m == "monument":
+        return getattr(MV, spec["name"])()
+    if m == "wall":
+        piece = spec.get("piece") or FO.PIECES[variant % 5]
+        return FO.wall_piece(spec["kind"], style, piece, spec.get("damage", 0), spec.get("progress", 1.0))
+    if m == "gate":
+        return FO.gate_section(style, age, spec["direction"], spec["open"], spec.get("half"))
+    if m == "gate_tower":
+        return FO.gate_tower(style, age)
+    if m == "gate_site":
+        s = E.construction(1.5, variant)
+        return Part("gate_site", children=[FO.gate_section(style, age, spec["direction"], False, spec.get("half")), s]) \
+            if variant >= count - 1 else s
+    if m == "fish_trap":
+        return E.fish_trap(spec.get("stage", 1.0 - variant / max(1, count - 1)))
+    if m == "construction":
+        return E.construction(spec.get("tiles") or max(1.0, fit.get("width", 96) / 96.0), variant)
+    if m == "rubble":
+        return E.rubble(spec.get("tiles") or max(1.0, fit.get("width", 96) / 96.0), variant)
+    if m == "tree":
+        mix = HALLOWEEN_TREES.get(spec.get("forest", ""), (spec.get("kind", "oak"),))
+        kind = mix[(variant * 7 + 3) % len(mix)] if len(mix) > 1 else mix[0]
+        return WL.tree(kind, fit.get("height", spec.get("height", 110)), variant, part)
+    if m == "stump":
+        return WL.stump(spec.get("kind", "oak"), variant, spec.get("felled", True))
+    if m == "ore":
+        return WL.ore_pile(spec["kind"], fit.get("width", 90), variant)
+    if m == "berry_bush":
+        return WL.berry_bush(variant)
+    if m == "rock":
+        return WL.boulder(variant, fit.get("width", 60))
+    if m == "plants":
+        return WL.plants(variant, spec.get("flowers", False))
+    if m == "cactus":
+        return WL.cactus(variant)
+    if m == "haystack":
+        return WL.haystack(variant)
+    if m == "projectile":
+        return WL.projectile(spec["kind"], t, spin=spec.get("pitched", False) or spec["kind"] in ("axe", "sword"))
+    if m == "gaia":
+        fn = getattr(WL, spec["name"])
+        if spec["name"] in ("yurt", "pavilion", "ruins", "stone_head", "graves", "heads", "rug", "crater", "sea_rock"):
+            return fn(spec.get("variant", variant))
+        if spec["name"] == "banner_flag":
+            return fn(spec.get("variant", 0), t)
+        if spec["name"] in ("standing_torch", "relic"):
+            return fn(t)
+        return fn()
+    return build_minecraft(spec, variant, count, t, fit, part)
+
+
+def build_minecraft(spec: dict, variant: int = 0, count: int = 1, t: float = 0.0, fit: Optional[dict] = None,
+                    part: str = None) -> Part:
+    """Age of Minecraft's model for one frame (kept for anything not yet made anew)."""
     m = spec["model"]
     style, age = spec.get("style", "W"), spec.get("age", 2)
     fit = fit or {}
