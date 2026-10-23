@@ -77,20 +77,28 @@ def sheet(units, path: Path, title: str, big: int = 2):
 
 
 def main(groups):
-    from aoh.infantry import FOOT
+    from aoh.roster import HALLOWEEN
     OUT.mkdir(exist_ok=True)
-    units = [f() for f in FOOT.values()]
+    units = [f() for f in HALLOWEEN.values()]
     pick = {
         "civilian": lambda u: u.group == "civilian",
         "foot": lambda u: u.group == "foot" and not u.civ,
-        "uniques": lambda u: u.civ is not None,
+        "uniques": lambda u: u.civ is not None and u.group == "foot",
+        "cavalry": lambda u: u.group == "cavalry",
+        "siege": lambda u: u.group == "siege",
+        "ships": lambda u: u.group == "ship",
+        "animals": lambda u: u.group == "animal",
+        "easter": lambda u: u.group == "easter",
     }
+    titles = {"civilian": "Villagers, the Necromancer and the Vampire Lord", "foot": "Infantry and archers",
+              "uniques": "Unique units on foot", "cavalry": "Cavalry", "siege": "Siege and the ghost train",
+              "ships": "Ships", "animals": "Animals", "easter": "Easter eggs and the Dragon"}
     for g in groups or list(pick):
         t = time.time()
         chosen = [u for u in units if pick[g](u)]
-        size = sheet(chosen, OUT / f"cast_{g}.png", {"civilian": "Villagers, the Necromancer and the Vampire Lord",
-                                                     "foot": "Infantry and archers",
-                                                     "uniques": "Unique units"}[g])
+        if not chosen:
+            continue
+        size = sheet(chosen, OUT / f"cast_{g}.png", titles[g])
         print(f"cast_{g}.png {size} {len(chosen)} units in {time.time() - t:.1f}s")
 
 

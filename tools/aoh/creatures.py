@@ -60,7 +60,7 @@ def fur(base, dark, seed=0) -> S.Material:
     return S.Material(color=color, vivid=0.2)
 
 
-def bandage(base=P.hexrgb("#cfc4a0"), dark=P.hexrgb("#6e6448"), seed=0) -> S.Material:
+def bandage(base=P.hexrgb("#ece0bc"), dark=P.hexrgb("#8a7e5c"), seed=0) -> S.Material:
     """Mummy wraps: bands wound round at a slant, dirty, with dark gaps between."""
     base, dark = np.asarray(base, float), np.asarray(dark, float)
 
@@ -70,7 +70,7 @@ def bandage(base=P.hexrgb("#cfc4a0"), dark=P.hexrgb("#6e6448"), seed=0) -> S.Mat
         band = (p[:, 2] * 1.6 + a * 0.6 + 0.4 * P.noise(p, 1.5, seed)) % 1.0
         c = P.mix(base, dark, 0.25 * P.fbm(p, 2.0, seed + 2) + 0.55 * np.clip((band - 0.82) * 6, 0, 1))
         return P.mix(c, P.hexrgb("#4a3a24"), np.clip((P.fbm(p, 3.0, seed + 5) - 0.6) * 3, 0, 1))
-    return S.Material(color=color, vivid=0.3)
+    return S.Material(color=color, vivid=0.6)
 
 
 def cloth(base, dark=None, seed=0, torn=True) -> S.Material:
