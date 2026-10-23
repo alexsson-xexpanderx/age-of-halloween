@@ -125,6 +125,13 @@ def _attack_arms(p: Pose, t: float, style: str) -> None:
         _add(p, "arm_r", 45 + 8 * math.sin(8 * math.pi * t))
         _add(p, "arm_l", 30)
         _add(p, "torso", -12)
+    elif style == "bomb":  # the bomb lifted overhead with both arms, flashing faster and faster until it blows
+        up = _ease(t / 0.45)
+        _add(p, "arm_r", 150 * up)
+        _add(p, "arm_l", 150 * up)
+        _add(p, "torso", 8 * up)
+        flash = _pulse((t * (2 + 6 * t)) % 1.0, 0.0, 1.0)
+        p.tint = (1.0, 0.85, 0.4, 0.5 * flash * up)
 
 
 # --------------------------------------------------------------------------- rigs
