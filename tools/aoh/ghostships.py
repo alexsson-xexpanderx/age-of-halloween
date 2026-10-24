@@ -276,7 +276,7 @@ def death_longboat(key="longboat") -> Unit:
     neck = [np.array([0, L / 2 * 0.85, 5.0]), np.array([0, L / 2 * 0.98, 9.0]), np.array([0, L / 2 * 0.95, 13.0])]
     for a, b in zip(neck, neck[1:]):
         parts += S.limb(tuple(a), tuple(b), 1.0, bone, 0.8)
-    parts.append(S.Ellipsoid(C.eyes_material(bone, [(-0.9, 0.5, 0.5, 0.4), (0.9, 0.5, 0.5, 0.4)], P.SLIME, 0.6),
+    parts.append(S.Ellipsoid(C.eyes_material(bone, [(-0.9, 0.5, 0.5, 0.4), (0.9, 0.5, 0.5, 0.4)], P.hexrgb("#ff2410"), 0.6),
                              S._orient(neck[-1] + (0, 1.6, 0.2)), radii=(1.5, 2.6, 1.4)))
     for sx in (-1, 1):
         for y in np.linspace(-L * 0.3, L * 0.3, 6):
@@ -301,7 +301,7 @@ def shell_ship(key="turtle_ship") -> Unit:
         a = 2 * math.pi * k / 10
         base = np.array([math.cos(a) * W * 0.3, math.sin(a) * L * 0.3 - 1.0, 9.0])
         parts.append(S.rod(tuple(base), tuple(base + (0, 0, 2.6)), 0.6, bone, 0.05))
-    parts.append(S.Ellipsoid(C.eyes_material(bone, [(-1.2, 0.6, 0.6, 0.5), (1.2, 0.6, 0.6, 0.5)], P.SLIME, 0.6),
+    parts.append(S.Ellipsoid(C.eyes_material(bone, [(-1.2, 0.6, 0.6, 0.5), (1.2, 0.6, 0.6, 0.5)], P.hexrgb("#ff2410"), 0.6),
                              S._orient((0, L / 2 * 0.88, 6.0)), radii=(3.0, 3.4, 2.6)))
     weapon = Part("weapon", pivot=(0, L / 2 * 0.9, 6.0), boxes=_cannons(np.linspace(-L * 0.2, L * 0.2, 3), W / 2 * 0.95,
                                                                           5.0, seed))

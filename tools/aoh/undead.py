@@ -25,7 +25,7 @@ ARM_X = 4.6  # shoulder joints' distance from the middle
 LEG_X = 2.0
 
 
-def _skull_material(glow=P.hexrgb("#9cff6a"), seed: int = 0) -> S.Material:
+def _skull_material(glow=P.hexrgb("#ff2410"), seed: int = 0) -> S.Material:
     """Bone with deep eye sockets, each holding a small glowing light, a nose hole and a row of teeth."""
     b = P.bone(seed)
 

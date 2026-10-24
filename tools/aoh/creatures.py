@@ -123,7 +123,12 @@ def spectral(length: float, seed=0, top=P.hexrgb("#dcf0fc"), bottom=P.hexrgb("#3
     return S.Material(color=color, glow=glow, vivid=0.85)
 
 
-def chainmail(base=P.hexrgb("#7a7a84"), seed=0) -> S.Material:
+PLATE = P.hexrgb("#5e4a3e")  # armour: dark, rusted iron (the player asked for no silver)
+BRONZE = P.hexrgb("#7a5c36")  # helmets: tarnished bronze
+BLADE = P.hexrgb("#6a5e54")  # blades: dull, rusty iron
+
+
+def chainmail(base=P.hexrgb("#5e4c3c"), seed=0) -> S.Material:
     base = np.asarray(base, float)
 
     def color(look):
@@ -176,7 +181,7 @@ class Body:
     arms_out: float = 0.0  # degrees the arms reach forward at rest (zombies, jiangshi)
     floating: bool = False  # no legs (ghosts, banshees)
     skin: Optional[S.Material] = None
-    eye: tuple = (0.61, 1.0, 0.42)  # the eyes' glow colour
+    eye: tuple = (1.0, 0.14, 0.06)  # the eyes' glow colour
     size: float = 1.0  # the head's size
     sculpted: bool = False  # a skeleton's skull modelled bone by bone (brow, cheekbones, sockets), not one ball
 
@@ -184,21 +189,21 @@ class Body:
 SKIN = {
     "zombie": lambda s: replace(flesh(P.hexrgb("#a2b886"), P.hexrgb("#5e6e48"), s, wounds=0.6, stitches=True),
                                 vivid=0.7),
-    "ghoul": lambda s: flesh(P.hexrgb("#8090a0"), P.hexrgb("#3e4656"), s, wounds=0.3),
+    "ghoul": lambda s: replace(flesh(P.hexrgb("#b09a84"), P.hexrgb("#5a4a40"), s, wounds=0.3), vivid=0.55),
     "imp": lambda s: flesh(P.hexrgb("#8a2a22"), P.hexrgb("#3a0e10"), s),
     "werewolf": lambda s: fur(P.hexrgb("#6a5a4a"), P.hexrgb("#2a221c"), s),
     "mummy": lambda s: bandage(seed=s),
-    "vampire": lambda s: flesh(P.hexrgb("#d8d0d8"), P.hexrgb("#8a7a90"), s),
+    "vampire": lambda s: replace(flesh(P.hexrgb("#ead2c2"), P.hexrgb("#9a746a"), s), shine=0.0, vivid=0.65),
     "batman": lambda s: fur(P.hexrgb("#6a564c"), P.hexrgb("#2a1e1c"), s),
-    "draugr": lambda s: flesh(P.hexrgb("#6e7c86"), P.hexrgb("#2e363e"), s, wounds=0.4),
-    "jiangshi": lambda s: flesh(P.hexrgb("#a8b8a4"), P.hexrgb("#5a6858"), s),
-    "ghost": lambda s: ghostly(seed=s),
-    "banshee": lambda s: ghostly(P.hexrgb("#d6e4ee"), seed=s),
+    "draugr": lambda s: replace(flesh(P.hexrgb("#7a6a5e"), P.hexrgb("#2e2420"), s, wounds=0.4), vivid=0.55),
+    "jiangshi": lambda s: replace(flesh(P.hexrgb("#c4b494"), P.hexrgb("#6a5c48"), s), vivid=0.55),
+    "ghost": lambda s: replace(ghostly(P.hexrgb("#7eaaee"), seed=s), vivid=0.9),
+    "banshee": lambda s: replace(ghostly(P.hexrgb("#8ab2f0"), seed=s), vivid=0.9),
     "phantom": lambda s: replace(ghostly(P.hexrgb("#d4ecf8"), seed=s), vivid=0.85),
 }
-EYES = {"skeleton": (0.61, 1.0, 0.42), "zombie": (1.0, 0.85, 0.3), "ghoul": (0.75, 0.95, 1.0),
-        "imp": (1.0, 0.75, 0.15), "werewolf": (1.0, 0.7, 0.1), "mummy": (0.55, 1.0, 0.45), "vampire": (1.0, 0.15, 0.1),
-        "batman": (1.0, 0.3, 0.15), "calavera": (1.0, 0.6, 0.15), "ghost": (0.4, 1.0, 0.95),
+EYES = {"skeleton": (1.0, 0.14, 0.06), "zombie": (1.0, 0.85, 0.3), "ghoul": (0.75, 0.95, 1.0),
+        "imp": (1.0, 0.75, 0.15), "werewolf": (1.0, 0.7, 0.1), "mummy": (1.0, 0.14, 0.06), "vampire": (1.0, 0.15, 0.1),
+        "batman": (1.0, 0.3, 0.15), "calavera": (1.0, 0.6, 0.15), "ghost": (1.0, 0.14, 0.06),
         "jiangshi": (0.9, 0.95, 0.85), "knight": (1.0, 0.12, 0.05), "draugr": (0.45, 0.8, 1.0),
         "banshee": (0.85, 0.95, 1.0), "phantom": (1.0, 0.14, 0.06)}
 
@@ -407,7 +412,7 @@ def _armour_shapes(b: Body, g: Gear, seed: int) -> list:
     sh = b.shoulder
     out = []
     if g.armour == "plate":
-        plate = P.metal(P.hexrgb("#3a363e") if b.kind == "knight" else P.hexrgb("#8e8e98"), rust=0.6, seed=seed)
+        plate = P.metal(P.hexrgb("#3a363e") if b.kind == "knight" else PLATE, rust=0.75, seed=seed)
         out += [S.ball((0, 0.4, sh - 3.3), (4.0, 3.0, 4.2), plate).clip((0, 0, -1), 3.6),
                 S.ball((b.arm_x + 0.3, 0, sh + 0.2), (2.0, 2.2, 1.5), plate),
                 S.ball((-b.arm_x - 0.3, 0, sh + 0.2), (2.0, 2.2, 1.5), plate)]
@@ -502,7 +507,7 @@ def _cloth_shapes(b: Body, g: Gear, seed: int) -> list:
             out.append(m)
         return out
     if g.cloth == "dress":
-        gown = ghostly(P.hexrgb("#c8d8e0"), seed + 2) if b.kind in ("ghost", "banshee") else drab
+        gown = replace(ghostly(P.hexrgb("#7aa6ea"), seed + 2), vivid=0.9) if b.kind in ("ghost", "banshee") else drab
         return [S.rod((0, 0, sh + 0.2), (0, 0, -1.0), 3.0, gown, 6.4), _belt(b, h + 2.0, True, seed)]
     if g.cloth == "wraps":  # a long Qing robe, dark, a gold hem, the owner's colour in the sash
         dark = cloth(P.hexrgb("#38586a"), seed=seed)
@@ -515,7 +520,7 @@ def _cloth_shapes(b: Body, g: Gear, seed: int) -> list:
 def _helmet_shapes(b: Body, kind: str, seed: int) -> list:
     n = b.neck
     top = n + 3.6 * b.size
-    iron = P.metal(P.hexrgb("#9a9aa6"), rust=0.5, seed=seed + 3)
+    iron = P.metal(BRONZE, rust=0.45, seed=seed + 3)
     dark_iron = P.metal(P.hexrgb("#4a4650"), rust=0.4, seed=seed + 3)
     if kind == "kettle":
         return [S.ball((0, 0.3, top + 0.4), (3.7, 3.9, 2.8), iron).clip((0, 0, -1), -0.2),
@@ -602,7 +607,7 @@ def _forward(up_deg=20.0):
 
 def _blade(length=11.0, width=0.85, m=None, up_deg=20.0, start=1.6) -> list:
     d, up = _forward(up_deg)
-    m = m or P.metal(P.hexrgb("#9696a2"), rust=0.6)
+    m = m or P.metal(BLADE, rust=0.7)
     base = d * start
     tip = base + d * length
     t = 0.22
@@ -627,7 +632,7 @@ def _shaft(length, back=4.0, up_deg=20.0, r=0.42, m=None) -> list:
 
 def weapon(name: str, seed: int = 0) -> list:
     """What a hand holds, with the grip at the origin, pointing forward (+y) and a little up."""
-    steel = P.metal(P.hexrgb("#9696a2"), rust=0.6, seed=seed)
+    steel = P.metal(BLADE, rust=0.7, seed=seed)
     wood = P.wood(P.hexrgb("#4e3626"), P.hexrgb("#2a1a12"), along=2)
     if name == "sword":
         return _blade(11.0) + _hilt()
@@ -643,7 +648,7 @@ def weapon(name: str, seed: int = 0) -> list:
                        glow=runes, shine=0.8, gloss=30)
         return _blade(17.0, 1.1, m) + _hilt(guard=3.4)
     if name == "katana":
-        return _blade(14.0, 0.55, P.metal(P.hexrgb("#c8ccd4"), seed=seed, shine=0.9), up_deg=28) + \
+        return _blade(14.0, 0.55, P.metal(P.hexrgb("#4e4a50"), rust=0.3, seed=seed, shine=0.8), up_deg=28) + \
             [S.rod(_forward(28)[0] * -2.2, _forward(28)[0] * 1.4, 0.45, P.team(0.3))]
     if name in ("spear", "pike", "javelin"):
         L = {"spear": 18.0, "pike": 26.0, "javelin": 13.0}[name]
@@ -763,7 +768,7 @@ def weapon(name: str, seed: int = 0) -> list:
 def chest_weapon(name: str, seed: int = 0) -> list:
     """A two-handed weapon held across the chest (part "item_c"), pointing forward from the origin."""
     wood = P.wood(P.hexrgb("#4a3020"), P.hexrgb("#24160e"), along=1)
-    steel = P.metal(P.hexrgb("#6a6a74"), rust=0.5, seed=seed)
+    steel = P.metal(P.hexrgb("#4e4238"), rust=0.6, seed=seed)
     if name in ("crossbow", "repeater"):
         out = [S.block((-0.6, -3.0, -0.6), (0.6, 6.0, 0.6), wood)]
         pts = [np.array([x, 5.4 - 0.08 * x * x, 0.0]) for x in np.linspace(-5, 5, 7)]
@@ -830,7 +835,7 @@ def person(key: str, name: str, replaces: str, b: Body, g: Gear = Gear(), attack
                 _limb_shapes(b, knee, ankle, thick * 0.82, thick * 0.66)
             foot_m = b.skin if b.kind not in ("knight",) else P.metal(P.hexrgb("#2a262e"), seed=seed)
             if g.armour == "plate" and b.kind != "knight":
-                foot_m = P.metal(P.hexrgb("#7a7a84"), rust=0.6, seed=seed)
+                foot_m = P.metal(PLATE, rust=0.75, seed=seed)
             shapes.append(S.ball((x, 1.0, 0.7), (1.05, 1.9, 0.8), foot_m))
             if b.kind == "knight" or g.armour == "plate":
                 shapes += S.limb((x, 0.2, h * 0.54 + 1.4), (x, 0.0, 2.0), 1.05, foot_m, 0.9)
@@ -900,11 +905,11 @@ def person(key: str, name: str, replaces: str, b: Body, g: Gear = Gear(), attack
             _limb_shapes(b, elbow, tuple(hand), thick * 0.85, thick * 0.72)
         hand_m = b.skin
         if b.kind == "knight" or g.armour == "plate":
-            hand_m = P.metal(P.hexrgb("#2a262e") if b.kind == "knight" else P.hexrgb("#7a7a84"), seed=seed)
+            hand_m = P.metal(P.hexrgb("#2a262e") if b.kind == "knight" else PLATE, rust=0.75, seed=seed)
             shapes += S.limb((x, 0, sh - 0.8), elbow, thick * 1.25, hand_m, thick * 1.15)
         if g.cloth in ("robe", "wraps", "dress", "shroud"):  # wide sleeves, the robe's colour
             sleeve = {"robe": cloth(P.hexrgb("#24202a"), seed=seed), "wraps": cloth(P.hexrgb("#38586a"), seed=seed),
-                      "dress": ghostly(P.hexrgb("#c8d8e0"), seed + 2) if b.kind in ("ghost", "banshee")
+                      "dress": replace(ghostly(P.hexrgb("#7aa6ea"), seed + 2), vivid=0.9) if b.kind in ("ghost", "banshee")
                       else cloth(DRAB[seed % len(DRAB)], seed=seed),
                       "shroud": spectral(10.0, seed + 2)}[g.cloth]
             shapes.append(S.rod((x, 0, sh - 0.4), (x + sign * 0.5, 0.6, sh - 7.2), thick * 1.5, sleeve,

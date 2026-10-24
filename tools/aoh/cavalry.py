@@ -12,6 +12,7 @@ creatures.py people seated as Age of Minecraft seated its riders (mounted.mount)
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 from typing import Optional
 
 import numpy as np
@@ -50,7 +51,7 @@ def steed(kind: str, seed: int = 0, barding: Optional[str] = None, saddle: bool 
     if kind == "bonehorse":
         skin = P.bone(seed)
     elif kind == "ghosthorse":
-        skin = C.ghostly(P.hexrgb("#a8d8d0"), seed)
+        skin = replace(C.ghostly(P.hexrgb("#76a2e6"), seed), vivid=0.9)
     elif kind == "mummycamel":
         skin = C.bandage(seed=seed)
     else:  # nightmare
@@ -58,8 +59,8 @@ def steed(kind: str, seed: int = 0, barding: Optional[str] = None, saddle: bool 
                                                 0.4 * P.fbm(l.p, 2.0, seed)), shine=0.45, gloss=24)
     camel = kind == "mummycamel"
     bony = kind == "bonehorse"
-    eye = {"nightmare": FLAME, "bonehorse": P.hexrgb("#9cff6a"), "ghosthorse": P.hexrgb("#e0fffa"),
-           "mummycamel": P.hexrgb("#9cff6a")}[kind]
+    eye = {"nightmare": FLAME, "bonehorse": P.hexrgb("#ff2410"), "ghosthorse": P.hexrgb("#ff2410"),
+           "mummycamel": P.hexrgb("#ff2410")}[kind]
     back = 17.0 if not camel else 20.0
     root = Part("root")
     body_shapes = []

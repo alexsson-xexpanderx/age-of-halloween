@@ -28,7 +28,7 @@ from .geometry import Part
 from .units import Unit
 
 RED_EYE = P.hexrgb("#ff3a1a")
-GREEN_EYE = P.hexrgb("#9cff6a")
+GREEN_EYE = RED_EYE  # the player asked for red eyes instead of green ones
 
 
 def _eyes(skin, glow, x=1.1, z=0.5, r=0.42):
@@ -276,7 +276,7 @@ def hotrod_hearse(key="cobra_car") -> Unit:
         return np.where(f, 1.4, 0.55)
     paint = P.team(0.55, flames)
     paint.shine, paint.gloss = 0.8, 40
-    chrome = P.metal(P.hexrgb("#c8c8d0"), seed=3, shine=1.0)
+    chrome = P.metal(P.hexrgb("#b08a3a"), seed=3, shine=1.0)  # brass, not chrome
     glass = S.Material(color=lambda l: P.mix(P.hexrgb("#1e2a30"), P.hexrgb("#5a7a80"), 0.4 * P.noise(l.p, 2.0, 4)),
                        shine=0.9, gloss=50)
     body = [S.hull([(x, y, z) for x in (-7.5, 7.5) for y, z0, z1 in ((-19.0, 4.0, 10.0), (18.0, 4.0, 8.5))
@@ -318,7 +318,7 @@ def bone_dragon(key="dragon") -> Unit:
     neck_pts = [np.array([0, 13.0, 1.0]) + (head_c - np.array([0, 15.0, 1.0])) * f for f in np.linspace(0, 1, 7)]
     neck = Part("neck", pivot=(0, 14.0, 0), boxes=[S.ball(tuple(p), 1.6 - 0.5 * f, bone)
                                                      for p, f in zip(neck_pts, np.linspace(0, 1, 7))])
-    skull_m = C.eyes_material(bone, [(-2.6, 1.0, 1.0, 0.8), (2.6, 1.0, 1.0, 0.8)], P.SLIME, 0.6)
+    skull_m = C.eyes_material(bone, [(-2.6, 1.0, 1.0, 0.8), (2.6, 1.0, 1.0, 0.8)], RED_EYE, 0.6)
     head = Part("head", pivot=tuple(head_c - (0, 2.0, 0)), boxes=[
         S.Ellipsoid(skull_m, S._orient(head_c), radii=(4.4, 5.4, 3.8)),
         S.hull([head_c + (sx * 2.6, 3.0, -0.8) for sx in (-1, 1)] + [head_c + (sx * 1.6, 9.2, -1.0) for sx in (-1, 1)] +

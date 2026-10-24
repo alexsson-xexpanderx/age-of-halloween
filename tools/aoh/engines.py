@@ -202,7 +202,7 @@ def gargoyle_bombard(key="bombard_cannon") -> Unit:
     mouth = S.mat(P.SLIME, glow=1.0)
     gm = C.eyes_material(P.mottled(P.hexrgb("#4a4650"), P.hexrgb("#24222a"), 1.5, 0.4, seed), [(-1.4, 1.2, 0.6, 0.5),
                                                                                                (1.4, 1.2, 0.6, 0.5)],
-                         P.SLIME, 0.6)
+                         P.hexrgb("#ff2410"), 0.6)
     barrel += [S.Ellipsoid(gm, S._orient(head_c), radii=(3.6, 3.4, 3.4)).clip((0, 1, -0.2), 1.6),
                S.ball(tuple(head_c + (0, 1.0, -0.4)), (2.0, 1.0, 1.6), mouth),
                S.rod(tuple(head_c + (-2.4, -0.6, 2.4)), tuple(head_c + (-3.8, -2.0, 6.0)), 0.8,
