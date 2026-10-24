@@ -42,6 +42,12 @@ MUTE = 0.28  # how much colour is drained (0 none, 1 grey)
 GRIME = 0.30  # how much darker things get at their feet
 INK = np.array([0.06, 0.04, 0.06])  # the outline colour: almost black
 INK_DEPTH = 1.6  # model units: a depth step at least this big gets an ink line
+# Pieces of one body melt together: shapes of one part with the same `blend` label meeting with a depth step under
+# BLEND_STEP get no ink line between them, and the light runs smoothly over the seam, BLEND either side of it. Drawn
+# each with its own outline and a hard crease, the upper arm, elbow, forearm, chest and belly read as the jointed
+# parts of a doll or a robot (the player's young tester called the units robotic).
+BLEND = 0.5  # model units
+BLEND_STEP = 3.0  # model units
 INF = np.inf
 
 
@@ -110,6 +116,7 @@ class Shape:
     xf: np.ndarray = field(default_factory=lambda: np.eye(4))  # shape -> part
     clips: list = field(default_factory=list)  # (normal, k): keep n . x <= k (in shape coordinates)
     ink: bool = True  # takes part in ink lines
+    blend: Optional[str] = None  # melts into the shapes of its part with the same label (flesh, bone, cloth)
 
     def clip(self, normal, k) -> "Shape":
         n = np.asarray(normal, float)
@@ -414,16 +421,75 @@ def torus(at, R, r, m: Material, rot=(0, 0, 0), steps=14) -> Lathe:
 
 # --------------------------------------------------------------------------- rendering
 
-def _items(root, pose: Pose, heading: float):
-    """Every shape and old box, with its world transform."""
+def _items(root, pose: Pose, heading: float, parts: bool = False):
+    """Every shape and old box, with its world transform (and with `parts`, its part's transform too)."""
     placed = place(root, pose, model_matrix(heading))
     out = []
     for pb in placed:
-        if isinstance(pb.box, Shape):
-            out.append((pb.box, pb.matrix @ pb.box.xf))
-        else:
-            out.append((pb.box, pb.matrix))
+        M = pb.matrix @ pb.box.xf if isinstance(pb.box, Shape) else pb.matrix
+        out.append((pb.box, M, pb.matrix) if parts else (pb.box, M))
     return out
+
+
+def _blend_groups(items) -> np.ndarray:
+    """A group number for each item (-1: none, and one more -1 at the end for nothing drawn): shapes of one part
+    with the same blend label share one."""
+    keys, out = {}, []
+    for it, _, part in items:
+        label = getattr(it, "blend", None)
+        out.append(-1 if label is None else keys.setdefault((label, np.round(part, 4).tobytes()), len(keys)))
+    return np.array(out + [-1], np.int32)
+
+
+def _box(a: np.ndarray, r: int) -> np.ndarray:
+    """Sums over a (2r + 1) square round each point of an image (zero beyond its edges)."""
+    for axis in (0, 1):
+        pad = [(r + 1, r) if k == axis else (0, 0) for k in range(a.ndim)]
+        c = np.cumsum(np.pad(a, pad), axis=axis)
+        n = c.shape[axis]
+        a = np.take(c, np.arange(2 * r + 1, n), axis) - np.take(c, np.arange(0, n - 2 * r - 1), axis)
+    return a
+
+
+def _dilate(m: np.ndarray) -> np.ndarray:
+    g = m.copy()
+    g[1:, :] |= m[:-1, :]
+    g[:-1, :] |= m[1:, :]
+    g[:, 1:] |= m[:, :-1]
+    g[:, :-1] |= m[:, 1:]
+    return g
+
+
+def _blend_seams(nw: np.ndarray, own: np.ndarray, g: np.ndarray, dep: np.ndarray, scale: float) -> np.ndarray:
+    """Normals (H, W, 3) smoothed across the seams where two shapes of one blend group meet: averaged over the
+    group near the seam, fading out BLEND away from it, so the pieces of a body read as one surface."""
+    H, W = g.shape
+    r = max(1, int(round(BLEND * scale)))
+    seam = np.zeros((H, W), bool)
+    for dy, dx in ((0, 1), (1, 0)):
+        a = (slice(0, H - dy), slice(0, W - dx))
+        b = (slice(dy, H), slice(dx, W))
+        with np.errstate(invalid="ignore"):
+            s = (g[a] >= 0) & (g[a] == g[b]) & (own[a] != own[b]) & (np.abs(dep[a] - dep[b]) < BLEND_STEP)
+        seam[a] |= s
+        seam[b] |= s
+    out = nw.copy()
+    for gi in np.unique(g[seam]):
+        ys, xs = np.nonzero(seam & (g == gi))
+        y0, y1 = max(ys.min() - 2 * r, 0), min(ys.max() + 2 * r + 1, H)
+        x0, x1 = max(xs.min() - 2 * r, 0), min(xs.max() + 2 * r + 1, W)
+        mask = g[y0:y1, x0:x1] == gi
+        near = seam[y0:y1, x0:x1] & mask
+        w = near.astype(float)
+        for k in range(1, r + 1):  # the weight falls off with the distance from the seam
+            grown = _dilate(near) & mask
+            w = np.where(grown & ~near, 1 - k / (r + 1), w)
+            near = grown
+        avg = _box(_box(nw[y0:y1, x0:x1] * mask[..., None], r) * mask[..., None], r)
+        avg = avg / (np.linalg.norm(avg, axis=2, keepdims=True) + 1e-12)
+        ww = (w * mask)[..., None]
+        out[y0:y1, x0:x1] = out[y0:y1, x0:x1] * (1 - ww) + avg * ww
+    return out / (np.linalg.norm(out, axis=2, keepdims=True) + 1e-12)
 
 
 def _world_corners(item, M) -> np.ndarray:
@@ -501,7 +567,8 @@ def render(root, heading: float, pose: Pose = None, camera: Camera = None, shado
     exactly as before (and as fast)."""
     pose = pose or Pose()
     camera = camera or Camera()
-    items = _items(root, pose, heading)
+    placed = _items(root, pose, heading, parts=True)
+    items = [(it, M) for it, M, _ in placed]
     if not any(isinstance(it, Shape) for it, _ in items):
         from . import render as old
         return old.render(root, heading, pose, camera, shadow=shadow, outline=True if outline is None else outline)
@@ -552,11 +619,15 @@ def render(root, heading: float, pose: Pose = None, camera: Camera = None, shado
         cutface[rows] = cut[closer]
 
     drawn = owner >= 0
+    H, W = cam.height, cam.width
     rgb = np.zeros((n, 3))
     light = np.zeros(n)
     kind = np.full(n, TRANSPARENT, np.uint8)
     view = -D / np.linalg.norm(D)
     world_z = (O + np.where(drawn, depth, 0)[:, None] * D)[:, 2]
+    gid = _blend_groups(placed)[np.where(drawn, owner, len(items))]
+    nws = np.zeros((n, 3))
+    looks = {}
     for idx in np.unique(owner[drawn]):
         rows = np.nonzero(owner == idx)[0]
         it, M = items[idx]
@@ -584,6 +655,13 @@ def render(root, heading: float, pose: Pose = None, camera: Camera = None, shado
             glow, team = np.zeros(len(rows)), box_team[rows]
             shine, gloss = np.zeros(len(rows)), np.full(len(rows), 8.0)
             vivid = 0.0
+        nws[rows] = nw
+        looks[idx] = (rows, base, glow, team, shine, gloss, vivid)
+    if (gid >= 0).any():
+        nws = _blend_seams(nws.reshape(H, W, 3), owner.reshape(H, W), gid.reshape(H, W),
+                           np.where(drawn, depth, INF).reshape(H, W), cam.scale).reshape(n, 3)
+    for idx, (rows, base, glow, team, shine, gloss, vivid) in looks.items():
+        nw = nws[rows]
         diffuse, add, lit = _light(nw, view, shine, gloss[0] if len(gloss) else 8.0, world_z[rows])
         col = base * diffuse + add
         grey = col @ np.array([0.3, 0.55, 0.15])
@@ -599,21 +677,25 @@ def render(root, heading: float, pose: Pose = None, camera: Camera = None, shado
         r_, g_, b_, s_ = pose.tint
         rgb = np.clip(rgb * (1 - s_) + np.array([r_, g_, b_]) * s_ * rgb.mean(axis=1, keepdims=True) * 2, 0, 1)
 
-    H, W = cam.height, cam.width
     # ink: where depth jumps between neighbouring samples, the nearer side gets a dark line
     if ink:
         dep = np.where(drawn, depth, INF).reshape(H, W)
+        grp = gid.reshape(H, W)
         inked = np.zeros((H, W), bool)
         thr = INK_DEPTH
         for dy, dx in ((0, 1), (1, 0), (0, -1), (-1, 0)):
             nb = np.full((H, W), INF)
+            nb_g = np.full((H, W), -1, np.int32)
             ys = slice(max(0, dy), H + min(0, dy))
             yd = slice(max(0, -dy), H + min(0, -dy))
             xs = slice(max(0, dx), W + min(0, dx))
             xd = slice(max(0, -dx), W + min(0, -dx))
             nb[yd, xd] = dep[ys, xs]
+            nb_g[yd, xd] = grp[ys, xs]
             with np.errstate(invalid="ignore"):
-                inked |= np.isfinite(dep) & (nb - dep > thr)  # the neighbour is far behind (or empty)
+                step = nb - dep
+                melted = (grp >= 0) & (nb_g == grp) & (step < BLEND_STEP)  # two pieces of one body
+                inked |= np.isfinite(dep) & (step > thr) & ~melted  # the neighbour is far behind (or empty)
         own = owner.reshape(H, W)
         inks = np.array([getattr(it, "ink", True) for it, _ in items] + [False])
         inked &= inks[np.where(own >= 0, own, len(items))]

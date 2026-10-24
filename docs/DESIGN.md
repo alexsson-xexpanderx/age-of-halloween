@@ -18,7 +18,7 @@ as a scary jack-o'-lantern. Gameplay stays the same; only the pictures change
 | Glows | carved pumpkin faces, eyes, windows, candles, lanterns and green fire stay bright | they are what you see first in the dark |
 | Scale | the same sizes as Age of Minecraft's sprites: infantry about 45 px tall, ships 2.4 times bigger than people | each sprite fills the room the game gives it |
 | Camera | orthographic, looking down at 30° (AoE2's view) | sprites sit correctly on the terrain |
-| Smoothing | 3 × 3 samples per pixel (2 × 2 for the giant), dark ink lines where shapes overlap | clean edges at AoE2's small sizes, in its 256 colours |
+| Smoothing | 3 × 3 samples per pixel (2 × 2 for the giant), dark ink lines where shapes overlap, but none between the pieces of one body | clean edges at AoE2's small sizes, in its 256 colours |
 | Shadow | a ground shadow toward the lower right, as SLP shadow pixels | AoE2 blends shadows itself |
 | Team colour | 8 shades per player: sashes, tabards, cloaks, sails, banners, plumes and flags | AoE2 swaps these palette ranges per player |
 
@@ -35,6 +35,20 @@ ridge over sunken sockets with glowing pupils, cheekbones, a nose, a mouth, a
 chin and ears. Skeletons have a skull modelled bone by bone (brow, cheekbones,
 nose hole, teeth). The Day of the Dead calaveras' skulls have flower petals
 round the eyes, a red heart on the nose and coloured dots on the brow.
+
+Bodies are made to look alive, not robotic (a young tester found the first
+ones looked like robots). Each body is drawn as one smooth surface: no dark
+lines or hard creases where the upper arm meets the forearm or the chest meets
+the belly, and no ball joints at the shoulders, elbows or knees. Arms and legs
+are muscled and taper to slim wrists and ankles; shoulders are muscles that
+move with the arm. Clothes hang: tabards fall over the chest in cloth, torn at
+the hem; mail shirts have short sleeves. Armour is dull, rusty and
+blackened, never shiny. Helmets and hats sit on the head above the brow, so
+the face always shows. The death knights are skeletons grinning out of dark
+horned helms, with ragged black mantles over their armour. The ghost samurai
+wears dark lacquered armour laced in the owner's colour, a demon mask over his
+mouth, and wide ghostly trousers that trail away below it. Ghouls have long
+thin hair, imps big wings.
 
 Horses are modelled like horses, not balloons. Each has a barrel, a deep
 chest, a broad croup, withers, and shoulder and thigh muscles. The neck is

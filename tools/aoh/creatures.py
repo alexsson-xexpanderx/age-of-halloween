@@ -8,11 +8,11 @@ at the hips). What a hand holds is a part "item_r" / "item_l" pivoting at the ha
 A body kind sets the skin, head, limbs and proportions:
 
     skeleton   bone, ribs, a skull with glowing eyes          zombie    rotting grey-green flesh, torn clothes
-    ghoul      gaunt, blue-grey, long arms, hunched           imp       small, red-black, horns, a tail
+    ghoul      gaunt, grey, long thin hair, hunched           imp       small, red-black, horns, wings, a tail
     werewolf   fur, a wolf's head, claws                      mummy     bandages wound round, glowing eyes
     vampire    pale, slicked hair, red eyes                   batman    a bat's head and folded wings (Camazotz)
     calavera   a painted sugar skull (Day of the Dead)        ghost     pale and glowing, floating, no legs
-    jiangshi   a hopping corpse in a robe and a hat           knight    a death knight: black plate, red visor
+    jiangshi   a hopping corpse in a robe and a hat           knight    a death knight: a skull in a horned helm
     draugr     a Norse corpse, icy blue eyes                  banshee   a floating wailing woman, white hair
     phantom    a pale glowing spectre in a hooded shroud whose hem trails into mist, a dark face with two red
                glowing eyes, floating (the villagers)
@@ -27,6 +27,7 @@ from typing import Optional
 
 import numpy as np
 
+from . import anatomy as A
 from . import paint as P
 from . import sculpt as S
 from .geometry import Part
@@ -48,7 +49,7 @@ def flesh(base, dark, seed=0, wounds=0.0, stitches=False) -> S.Material:
             st = (np.abs(p[:, 0] - 0.3 * np.sin(p[:, 2] * 0.7)) < 0.12) & (np.abs(np.sin(p[:, 2] * 4.0)) > 0.6)
             c = np.where(st[:, None], P.hexrgb("#1e1a14"), c)
         return c
-    return S.Material(color=color, shine=0.12, gloss=10, vivid=0.3)
+    return S.Material(color=color, shine=0.03, gloss=8, vivid=0.3)  # matte: shiny skin looked like plastic
 
 
 def fur(base, dark, seed=0) -> S.Material:
@@ -124,8 +125,23 @@ def spectral(length: float, seed=0, top=P.hexrgb("#dcf0fc"), bottom=P.hexrgb("#3
 
 
 PLATE = P.hexrgb("#5e4a3e")  # armour: dark, rusted iron (the player asked for no silver)
+KNIGHT_PLATE = P.hexrgb("#2c2422")  # the death knights' blackened iron: warm, not the blue-grey of a machine
 BRONZE = P.hexrgb("#7a5c36")  # helmets: tarnished bronze
 BLADE = P.hexrgb("#6a5e54")  # blades: dull, rusty iron
+
+
+def lamellar(seed=0) -> S.Material:
+    """Rows of little plates lacquered a dark red-brown, laced together in the owner's colour (all in the owner's
+    colour, the ghost samurai looked like a robot)."""
+    lacquer = P.hexrgb("#4a2a22")
+
+    def lacing(look):
+        return (look.p[:, 2] * 0.4 + 0.2) % 1.0 < 0.26  # a broad band every few rows
+
+    def color(look):
+        c = P.mix(lacquer, lacquer * 0.55, P.noise(look.p, 1.5, seed))
+        return np.where(lacing(look)[:, None], 0.62, c)
+    return S.Material(color=color, team=lacing, shine=0.15, gloss=14)
 
 
 def chainmail(base=P.hexrgb("#5e4c3c"), seed=0) -> S.Material:
@@ -263,7 +279,7 @@ def _sculpted_skull(n: float, k: float, glow, seed: int) -> list:
     for sx in (1, -1):  # the cheekbones
         out.append(S.Ellipsoid(bone, S._orient(tuple(c + (sx * 1.75 * k, 1.6 * k, -0.75 * k))),
                                radii=(0.7 * k, 1.0 * k, 0.5 * k)))
-    return out
+    return A.soft(out, "bone")
 
 
 def _sugar(n: float, k: float, seed: int) -> list:
@@ -344,22 +360,9 @@ def _head_shapes(b: Body, seed: int) -> list:
                 # the hood rises to a point at the back of the head and falls down over the shoulders
                 S.hull([(-2.6, -2.0, top + 1.4), (2.6, -2.0, top + 1.4), (0, -1.0, top + 5.4), (0, -4.2, top + 1.6),
                         (-3.0, -3.4, top - 2.4), (3.0, -3.4, top - 2.4)], hood)]
-    if kind == "knight":  # a black great helm with a glowing visor slit and spikes
-        plate = P.metal(P.hexrgb("#2a262e"), rust=0.3, seed=seed, shine=0.7)
-
-        def visor(look):
-            p = look.p
-            return ((np.abs(p[:, 2] - 0.4) < 0.35) & (p[:, 1] > 1.5) & (np.abs(p[:, 0]) < 2.6)).astype(float)
-        helm_m = S.Material(color=lambda l: np.where(visor(l)[:, None] > 0, np.asarray(eye, float),
-                                                     plate.color(l)), glow=visor, shine=0.7, gloss=30)
-        return [S.rod((0, 0.3, n - 0.2), (0, 0.3, n + 6.2), 3.6, helm_m, 3.2),
-                S.ball((0, 0.3, n + 6.2), (3.2, 3.2, 1.4), plate),
-                S.hull([(-0.6, 0.3, n + 7.2), (0.6, 0.3, n + 7.2), (0, -0.3, n + 7.2), (0, 0.9, n + 7.2),
-                        (0, 0.3, n + 10.0)], plate),
-                S.hull([(-3.3, 0.3, n + 4.8), (-3.3, 0.3, n + 6.0), (-3.3, -0.4, n + 5.4), (-6.0, 0.3, n + 7.6)],
-                       plate),
-                S.hull([(3.3, 0.3, n + 4.8), (3.3, 0.3, n + 6.0), (3.3, -0.4, n + 5.4), (6.0, 0.3, n + 7.6)],
-                       plate)]
+    if kind == "knight":  # a skull grinning out of a dark horned helm, its sockets burning (a closed helm with two
+        # eyes behind a visor looked like a robot to the player's young tester)
+        return _sculpted_skull(n, k, eye, seed) + _helmet_shapes(b, "horned", seed)
     # flesh heads, modelled (the player found ball heads like Lego): a cranium, a narrower face and jaw, a brow
     # ridge over sunken sockets with glowing pupils, cheekbones, a nose, a mouth, a chin and ears
     shapes = _face_shapes(b, seed)
@@ -374,6 +377,16 @@ def _head_shapes(b: Body, seed: int) -> list:
                 shapes.append(S.block((x * k - 0.16, 2.95 * k, -1.45 * k + c[2] - 0.5), (x * k + 0.16, 3.15 * k,
                                                                                          -1.45 * k + c[2]),
                                       S.mat(P.hexrgb("#c8b890"))))
+    if kind == "ghoul":  # long thin hair hanging in strings from the crown to the shoulders
+        hair = S.mat(P.hexrgb("#2a2420"))
+        rng = np.random.default_rng(seed + 31)
+        shapes.append(S.ball(tuple(c + (0, -0.7 * k, 1.5 * k)), (2.7 * k, 2.6 * k, 1.8 * k), hair)
+                      .clip((0, 1, -0.5), 0.9 * k))
+        for j in range(9):
+            a = math.radians(-120 + j * 30 + rng.uniform(-8, 8))
+            root_ = c + (math.cos(a) * 2.5 * k, math.sin(a) * 2.2 * k - 0.6 * k, 1.4 * k)
+            tip = root_ * (1.12, 1.0, 1.0) + (0, -0.8 - rng.uniform(0, 0.8), -5.0 - rng.uniform(0, 2.5))
+            shapes.append(A._fine(S.rod(tuple(root_), tuple(tip), 0.42, hair, 0.12)))
     if kind == "zombie":  # matted hair in patches, one ear torn
         hair = P.mottled(P.hexrgb("#2a2018"))
         shapes += [S.ball(tuple(c + (-1.4, -0.6, 2.6)), (1.3, 1.6, 0.6), hair),
@@ -439,7 +452,7 @@ def _face_shapes(b: Body, seed: int) -> list:
         if b.kind not in ("vampire", "imp"):
             out.append(S.Ellipsoid(skin, S._orient(tuple(c + (sx * 2.75 * k, -0.2 * k, -0.1 * k))),
                                    radii=(0.35 * k, 0.8 * k, 1.0 * k)))
-    return out
+    return A.soft(out, "flesh")
 
 def _talisman(look):
     p = look.p
@@ -470,32 +483,40 @@ class Gear:
 
 
 def _armour_shapes(b: Body, g: Gear, seed: int) -> list:
-    sh = b.shoulder
+    """Armour shaped to the body, not a barrel: a breastplate with a ridge down its front, a gorget, layered
+    shoulder plates and a short skirt of plates; a chain shirt with a mail skirt; lamellar of little plates laced
+    in the owner's colour."""
+    sh, h = b.shoulder, b.hip
     out = []
     if g.armour == "plate":
-        plate = P.metal(P.hexrgb("#3a363e") if b.kind == "knight" else PLATE, rust=0.75, seed=seed)
-        out += [S.ball((0, 0.4, sh - 3.3), (4.0, 3.0, 4.2), plate).clip((0, 0, -1), 3.6),
-                S.ball((b.arm_x + 0.3, 0, sh + 0.2), (2.0, 2.2, 1.5), plate),
-                S.ball((-b.arm_x - 0.3, 0, sh + 0.2), (2.0, 2.2, 1.5), plate)]
-        if b.kind == "knight":
-            for x in (b.arm_x + 0.6, -b.arm_x - 0.6):
-                out.append(S.hull([(x - 0.6, -0.5, sh + 1.2), (x + 0.6, -0.5, sh + 1.2), (x, 0.5, sh + 1.2),
-                                   (x * 1.15, 0, sh + 3.6)], plate))
+        plate = P.metal(KNIGHT_PLATE if b.kind == "knight" else PLATE, rust=0.75, seed=seed, shine=0.15)
+        out += [S.Ellipsoid(plate, S._orient((0, 0.3, sh - 3.2)), radii=(3.3, 2.15, 3.7)),
+                S.Ellipsoid(plate, S._orient((0, 2.2, sh - 3.6)), radii=(0.4, 0.35, 2.9)),  # the ridge
+                S.Ellipsoid(plate, S._orient((0, -0.1, sh + 0.55)), radii=(1.7, 1.45, 0.75))]  # the gorget
+        out += A.drape(plate, h + 2.6, h - 1.6, 3.1, 3.6, seed, 0)  # the fauld over the hips
+        for sx in (1, -1):  # pauldrons: two flat plates on each shoulder, sloping down and out over the arm
+            out += [S.Ellipsoid(plate, S._orient((sx * (b.arm_x + 0.1), 0.0, sh + 0.1), (0, sx * 28, 0)),
+                                radii=(2.1, 1.8, 0.7)),
+                    S.Ellipsoid(plate, S._orient((sx * (b.arm_x + 0.6), 0.0, sh - 0.9), (0, sx * 40, 0)),
+                                radii=(1.8, 1.6, 0.6))]
     elif g.armour == "mail":
-        out.append(S.ball((0, 0.3, sh - 3.6), (3.9, 2.9, 4.6), chainmail(seed=seed)).clip((0, 0, -1), 4.4))
+        mail = chainmail(seed=seed)
+        out += [S.Ellipsoid(mail, S._orient((0, 0.25, sh - 3.1)), radii=(3.35, 2.3, 3.5)),
+                S.Ellipsoid(mail, S._orient((0, 0.1, h + 3.2)), radii=(2.95, 2.15, 2.5))]
+        out += A.drape(mail, h + 1.8, h - 3.2, 3.0, 3.6, seed, 0)  # (its short sleeves are on the arms)
     elif g.armour == "lamellar":
-        def plates(look):
-            p = look.p
-            rows = (p[:, 2] * 1.6) % 1.0 < 0.18
-            return np.where(rows, 0.35, 0.72)
-        out.append(S.ball((0, 0.3, sh - 3.6), (4.0, 3.0, 4.6), P.team(0.7, plates)).clip((0, 0, -1), 4.4))
-        for x in (b.arm_x + 0.4, -b.arm_x - 0.4):
-            out.append(S.block((x - 1.6, -1.6, sh - 3.5), (x + 1.6, 1.6, sh + 0.6), P.team(0.6, plates),
-                               rot=(0, 18 if x > 0 else -18, 0)))
+        lam = lamellar(seed)
+        out += [S.Ellipsoid(lam, S._orient((0, 0.3, sh - 3.2)), radii=(3.3, 2.25, 3.6)),
+                S.Ellipsoid(lam, S._orient((0, 0.1, h + 3.2)), radii=(2.95, 2.15, 2.5))]
+        out += A.drape(lam, h + 1.8, h - 2.6, 3.0, 3.5, seed, 0)
+        for sx in (1, -1):  # the sode: broad curved plates hanging over the upper arms
+            out.append(S.Ellipsoid(lam, S._orient((sx * (b.arm_x + 0.5), 0.0, sh - 1.6), (0, sx * 18, 0)),
+                                   radii=(0.6, 1.9, 2.4)))
     return out
 
 
-DRAB = [P.hexrgb("#80684e"), P.hexrgb("#6a6a74"), P.hexrgb("#6c7250"), P.hexrgb("#74504a"), P.hexrgb("#5e5868")]
+DRAB = [P.hexrgb("#80684e"), P.hexrgb("#7a5e3a"), P.hexrgb("#6c7250"), P.hexrgb("#74504a"), P.hexrgb("#5e4a5e")]
+A_SLEEVE = {"rags": cloth(P.hexrgb("#4a4236"), seed=7)}  # the sleeves' cloth where it is not the shirt's
 
 
 def _torn_skirt(top, bottom, r0, r1, m) -> S.Shape:
@@ -521,31 +542,39 @@ def _cloth_shapes(b: Body, g: Gear, seed: int) -> list:
     game's own units carry it), so the creatures inside still show."""
     h, sh = b.hip, b.shoulder
     drab = cloth(DRAB[seed % len(DRAB)], seed=seed)
+    rope = S.mat(P.hexrgb("#5a4a32"))
+    leather = S.mat(P.hexrgb("#3e2a1c"), shine=0.1)
     if g.cloth == "loin":
-        return [_torn_skirt(h + 1.0, h - 3.6, 3.1, 3.5, team_cloth(0.55, seed)), _belt(b, h + 1.0, False)]
+        return A.drape(team_cloth(0.55, seed), h + 1.0, h - 3.6, 2.9, 3.4, seed, 7) + A.belt(h + 1.0, 2.9, rope, seed,
+                                                                                            False)
     if g.cloth == "tunic":
-        if b.kind in ("skeleton", "calavera"):  # no shirt over the ribs: a sash across them instead
-            sash = S.rod((-3.4, 2.4, sh + 0.4), (3.0, 2.6, h + 1.2), 0.7, team_cloth(0.62, seed))
-            back = S.rod((-3.4, -2.6, sh + 0.4), (3.0, -2.4, h + 1.2), 0.7, team_cloth(0.5, seed))
-            return [sash, back, _torn_skirt(h + 1.2, h - 3.2, 3.2, 3.7, drab), _belt(b, h + 1.2, False)]
-        return [_chest(b, drab), _torn_skirt(h + 1.2, h - 3.2, 3.4, 3.9, drab), _belt(b, h + 1.2, True, seed)]
+        if b.kind in ("skeleton", "calavera"):  # no shirt over the ribs: a sash across them, rags round the hips
+            sash = S.rod((-3.4, 2.2, sh + 0.4), (3.0, 2.4, h + 1.2), 0.7, team_cloth(0.62, seed))
+            back = S.rod((-3.4, -2.4, sh + 0.4), (3.0, -2.2, h + 1.2), 0.7, team_cloth(0.5, seed))
+            return [sash, back] + A.drape(drab, h + 1.2, h - 3.4, 2.7, 3.4, seed, 9) + A.belt(h + 1.2, 2.8, rope,
+                                                                                             seed, False)
+        return (A.torso(b.kind, drab, h + 0.05, sh + 0.05, b.arm_x + 0.1)[:2] +
+                A.drape(drab, h + 1.4, h - 3.6, 3.0, 3.7, seed, 10) + A.belt(h + 1.4, 3.0, team_cloth(0.62, seed),
+                                                                              seed))
     if g.cloth == "tabard":  # narrow panels front and back over the chest, in the owner's colour, a skull on it
         def emblem(look):
             p = look.p
             skull = (np.hypot(p[:, 0] / 1.0, (p[:, 2] - (sh - 4.5)) / 1.1) < 1.0)
             return np.where(skull, 0.25, 1.0)
         t = P.team(0.6, emblem)
-        return [S.block((-2.3, 2.4, h - 4.0), (2.3, 2.8, sh - 0.6), t),
-                S.block((-2.3, -3.1, h - 4.0), (2.3, -2.7, sh - 0.6), team_cloth(0.5, seed)),
-                _belt(b, h + 1.2, False)]
-    if g.cloth == "robe":  # a long dark robe, the owner's colour in the trim and the sash
+        out = A.drape(t, sh - 0.4, h + 1.2, 3.25, 3.15, seed, 0, y_scale=0.86) + \
+            A.drape(t, h + 1.3, h - 4.2, 3.05, 3.5, seed + 1, 5, y_scale=0.9)
+        for s in out:  # open at the sides: a panel in front, one behind
+            s.clip((1, 0, 0), 2.3).clip((-1, 0, 0), 2.3)
+        return out + A.belt(h + 1.2, 2.9, S.mat(P.hexrgb("#3e2a1c"), shine=0.1), seed, False)
+    if g.cloth == "robe":  # a long dark robe falling in folds to a torn hem, a sash in the owner's colour
         dark = cloth(P.hexrgb("#24202a"), seed=seed)
-        return [S.rod((0, 0, sh + 0.3), (0, 0, 0.8), 3.0, dark, 4.8),
-                S.rod((0, 0, 1.6), (0, 0, 0.6), 4.65, team_cloth(0.5, seed), 4.85, capped=False),
-                _belt(b, h + 1.4, True, seed)]
-    if g.cloth == "rags":  # a torn shirt and a ragged skirt, a rag tied round the arm in the owner's colour
-        return [_chest(b, drab, 0.25), _torn_skirt(h + 1.0, h - 5.0, 3.2, 3.7, cloth(P.hexrgb("#3e382e"), seed=seed)),
-                _belt(b, h + 1.0, True, seed)]
+        return (A.drape(dark, sh + 0.3, h - 1.0, 3.1, 4.0, seed, 0) +
+                A.drape(dark, h - 0.9, 0.6, 4.0, 4.9, seed + 1, 12) + A.belt(h + 1.4, 3.0, team_cloth(0.55, seed), seed))
+    if g.cloth == "rags":  # a torn shirt, ragged breeches hanging in strips, a belt in the owner's colour
+        shirt = A.torso(b.kind, drab, h + 0.05, sh + 0.05, b.arm_x + 0.1)[:2]
+        return shirt + A.drape(cloth(P.hexrgb("#3e382e"), seed=seed), h + 1.0, h - 4.4, 3.0, 3.6, seed, 11) + \
+            A.belt(h + 1.0, 3.0, team_cloth(0.6, seed), seed)
     if g.cloth == "shroud":  # a long hooded robe, pale and glowing, its hem trailing into wisps of mist
         robe_top, robe_foot = sh + 0.6, 1.6
         rng = np.random.default_rng(seed + 40)
@@ -569,39 +598,61 @@ def _cloth_shapes(b: Body, g: Gear, seed: int) -> list:
         return out
     if g.cloth == "dress":
         gown = replace(ghostly(P.hexrgb("#7aa6ea"), seed + 2), vivid=0.9) if b.kind in ("ghost", "banshee") else drab
-        return [S.rod((0, 0, sh + 0.2), (0, 0, -1.0), 3.0, gown, 6.4), _belt(b, h + 2.0, True, seed)]
+        return A.drape(gown, sh + 0.2, h - 2.0, 3.0, 4.6, seed, 0) + A.drape(gown, h - 1.9, -1.0, 4.6, 6.4, seed + 1,
+                                                                                     13) + \
+            A.belt(h + 2.0, 2.9, team_cloth(0.6, seed), seed, False)
+    if g.cloth == "hakama":  # wide pleated trousers flaring from under the armour's skirt, a ghost's trailing away
+        gown = replace(ghostly(P.hexrgb("#6a8ed8"), seed + 2), vivid=0.9) if b.floating else             cloth(P.hexrgb("#2a2430"), seed=seed)
+        return A.drape(gown, h + 0.5, -1.0, 2.9, 5.2, seed + 1, 13)
     if g.cloth == "wraps":  # a long Qing robe, dark, a gold hem, the owner's colour in the sash
         dark = cloth(P.hexrgb("#38586a"), seed=seed)
-        return [S.rod((0, 0, sh + 0.5), (0, 0, 0.8), 3.4, dark, 4.6),
-                S.rod((0, 0, 1.8), (0, 0, 0.6), 4.45, S.mat(P.GOLD, shine=0.6), 4.65, capped=False),
-                _belt(b, h + 1.2, True, seed)]
+        return (A.drape(dark, sh + 0.5, h - 1.0, 3.3, 3.9, seed, 0) + A.drape(dark, h - 0.9, 0.8, 3.9, 4.6, seed + 1, 0)
+                + A.belt(h + 1.2, 3.1, team_cloth(0.6, seed), seed, False))
     return []
 
 
 def _helmet_shapes(b: Body, kind: str, seed: int) -> list:
-    n = b.neck
-    top = n + 3.6 * b.size
-    iron = P.metal(BRONZE, rust=0.45, seed=seed + 3)
-    dark_iron = P.metal(P.hexrgb("#4a4650"), rust=0.4, seed=seed + 3)
-    if kind == "kettle":
-        return [S.ball((0, 0.3, top + 0.4), (3.7, 3.9, 2.8), iron).clip((0, 0, -1), -0.2),
-                S.rod((0, 0.3, top + 0.1), (0, 0.3, top + 0.5), 5.4, iron)]
+    """Hats and helmets, fitted to the modelled heads: the cranium is centred about 3.8 above the neck (times the
+    head's size) and a little back, reaches 6.7 up, the brow sits at 4.2 and the eyes at 3.6. A helmet comes down to
+    the brow and no lower (lower, it hid the eyes, or the whole face under the ghost pirate's hat); the top of the
+    skull must not poke through."""
+    n, k = b.neck, b.size
+    top = n + 3.6 * k
+    zc, yc = n + 3.8 * k, -0.35 * k  # the cranium's middle
+    iron = P.metal(BRONZE, rust=0.45, seed=seed + 3, shine=0.2)
+    dark_iron = P.metal(KNIGHT_PLATE, rust=0.5, seed=seed + 3, shine=0.15)
+
+    def open_helm(m):  # a deep rounded helm, open at the face, its sides down over the cheeks, a nasal
+        out = [S.ball((0, yc, zc + 0.2 * k), (3.25 * k, 3.5 * k, 3.4 * k), m).clip((0, 1, 0.35), 1.6 * k),
+               S.block((-0.3 * k, 2.95 * k, n + 2.9 * k), (0.3 * k, 3.4 * k, n + 4.7 * k), m)]
+        for sx in (1, -1):
+            out.append(S.Ellipsoid(m, S._orient((sx * 2.4 * k, 1.0 * k, n + 2.2 * k)), radii=(0.55, 1.3, 1.5)))
+        return out
+    if kind == "kettle":  # a round crown and a brim turned down, above the brow
+        return [S.ball((0, yc, zc + 0.6 * k), (3.15 * k, 3.4 * k, 2.75 * k), iron).clip((0, 0, -1), -0.05 * k),
+                S.rod((0, yc, n + 4.75 * k), (0, yc, n + 4.25 * k), 3.3 * k, iron, 4.1 * k)]  # the brim
     if kind == "nasal":
-        return [S.ball((0, 0.3, top + 0.2), (3.75, 3.95, 3.6), iron).clip((0, 0, -1), 0.3),
-                S.block((-0.35, 3.8, top - 2.6), (0.35, 4.4, top + 0.6), iron)]
-    if kind == "great":
-        return [S.rod((0, 0.3, top - 4.2), (0, 0.3, top + 1.6), 3.9, iron, 3.6),
-                S.block((-2.6, 3.7, top - 1.6), (2.6, 4.4, top - 1.0), S.mat(P.hexrgb("#120c10")))]
-    if kind == "horned":
-        horn = S.mat(P.hexrgb("#d8ccb0"), shine=0.3)
-        return [S.rod((0, 0.3, top - 4.2), (0, 0.3, top + 1.6), 3.9, dark_iron, 3.6),
-                S.block((-2.6, 3.7, top - 1.6), (2.6, 4.4, top - 1.0), S.mat(P.hexrgb("#120c10"))),
-                S.rod((3.4, 0.3, top - 0.4), (6.0, 0.8, top + 3.4), 0.9, horn, 0.15),
-                S.rod((-3.4, 0.3, top - 0.4), (-6.0, 0.8, top + 3.4), 0.9, horn, 0.15)]
+        return [S.ball((0, yc, zc + 0.4 * k), (3.2 * k, 3.45 * k, 3.0 * k), iron).clip((0, 0, -1), 0.25 * k),
+                S.block((-0.3 * k, 2.95 * k, n + 2.9 * k), (0.3 * k, 3.4 * k, n + 4.6 * k), iron)]
+    if kind == "great":  # open at the face, cheek guards, a plume in the owner's colour
+        out = open_helm(iron)
+        for j in range(5):
+            out.append(S.Ellipsoid(P.team(0.6), S._orient((0, -0.6 - j * 0.9, n + 7.6 * k - j * 0.5),
+                                                           (60 + j * 10, 0, 0)), radii=(0.7, 0.6, 1.6)))
+        return out
+    if kind == "horned":  # dark, the skull grinning out of it, great curling horns
+        horn = S.mat(P.hexrgb("#d8ccb0"), shine=0.2)
+        out = open_helm(dark_iron)
+        for sx in (1, -1):
+            pts = [np.array([sx * 2.9, -0.2, n + 5.2]), np.array([sx * 4.9, -0.3, n + 6.2]),
+                   np.array([sx * 6.0, 0.3, n + 8.3]), np.array([sx * 5.2, 1.1, n + 9.9])]
+            for j, (p, q) in enumerate(zip(pts, pts[1:])):
+                out.append(S.rod(tuple(p), tuple(q), 0.95 - 0.28 * j, horn, 0.7 - 0.25 * j))
+        return out
     if kind in ("hood", "cowl"):  # a hood over the head, open at the face, and a short cape over the shoulders
         hood = team_cloth(0.42, seed) if kind == "hood" else cloth(P.hexrgb("#1c181e"), seed=seed)
         mantle = cloth(DRAB[seed % len(DRAB)], seed=seed) if kind == "hood" else hood
-        return [S.ball((0, -0.3, top - 0.8), (3.9, 4.1, 4.3), hood).clip((0, 1, 0), 1.9),
+        return [S.ball((0, yc - 0.1, zc - 0.3 * k), (3.45 * k, 3.75 * k, 3.75 * k), hood).clip((0, 1, 0), 2.0 * k),
                 S.rod((0, -0.2, b.shoulder + 1.6), (0, -0.2, b.shoulder - 1.4), 2.6, mantle, 5.0)]
     if kind == "crown":  # on the top of the head, above the brow (lower, its band crossed the eyes like make-up)
         gold = P.metal(P.GOLD, seed=seed, shine=0.8)
@@ -614,23 +665,23 @@ def _helmet_shapes(b: Body, kind: str, seed: int) -> list:
                                (math.cos(r) * 2.9, math.sin(r) * 2.9 + 0.3, z0 + 2.6)], gold))
         out.append(S.ball((0, 3.1, z0 + 0.55), 0.3, S.mat(P.BLOOD, glow=0.5)))
         return out
-    if kind == "turban":
-        return [S.torus((0, 0.2, top - 0.6), 3.2, 1.3, team_cloth(0.65, seed)),
-                S.ball((0, 0.2, top + 0.4), (3.0, 3.0, 2.2), team_cloth(0.6, seed))]
-    if kind == "fez":
-        return [S.rod((0, 0.3, top - 0.6), (0, 0.3, top + 2.4), 2.6, P.team(0.55), 2.1),
-                S.rod((0, 0.3, top + 2.4), (1.6, -0.6, top + 0.4), 0.2, S.mat(P.GOLD))]
+    if kind == "turban":  # wound round the head above the brow
+        return [S.torus((0, yc, n + 5.0 * k), 2.75 * k, 1.25 * k, team_cloth(0.65, seed)),
+                S.ball((0, yc, n + 6.1 * k), (2.95 * k, 3.1 * k, 2.2 * k), team_cloth(0.6, seed))]
+    if kind == "fez":  # on the crown of the head, a gold tassel hanging from its top
+        return [S.rod((0, yc, n + 5.3 * k), (0, yc, n + 8.6 * k), 2.45 * k, P.team(0.55), 2.0 * k),
+                S.rod((0, yc, n + 8.6 * k), (1.6, yc - 0.9, n + 6.4 * k), 0.2, S.mat(P.GOLD))]
     if kind == "feathers":  # marigolds and plumes (Day of the Dead)
         out = []
         cols = [P.hexrgb("#f08a10"), P.hexrgb("#e0407a"), P.hexrgb("#f0c020")]
-        for k, a in enumerate(range(-70, 71, 20)):
+        for j, a in enumerate(range(-70, 71, 20)):
             r = math.radians(a)
-            base = (math.sin(r) * 2.6, math.cos(r) * 0.6 - 1.0, top + 1.0)
-            tip = (math.sin(r) * 6.0, -2.0, top + 7.5 - abs(a) * 0.04)
-            out.append(S.Ellipsoid(P.team(0.6) if k % 3 == 1 else S.mat(cols[k % 3], vivid=1.0),
+            base = (math.sin(r) * 2.4, math.cos(r) * 0.6 - 1.0, n + 5.8 * k)
+            tip = (math.sin(r) * 6.0, -2.0, top + 8.5 - abs(a) * 0.04)
+            out.append(S.Ellipsoid(P.team(0.6) if j % 3 == 1 else S.mat(cols[j % 3], vivid=1.0),
                                    S.axis_frame(base, tip) @ S.affine(None, (0, 0, 3.6)),
                                    radii=(0.9, 0.35, 3.8)))
-        out.append(S.torus((0, 0.3, top - 0.6), 3.3, 0.8, S.mat(P.hexrgb("#f08a10"), vivid=1.0)))
+        out.append(S.torus((0, yc, n + 5.0 * k), 2.95 * k, 0.75 * k, S.mat(P.hexrgb("#f08a10"), vivid=1.0)))
         return out
     if kind == "pelt":  # a jaguar's head over the warrior's
         spots = S.Material(color=lambda l: np.where(
@@ -639,23 +690,30 @@ def _helmet_shapes(b: Body, kind: str, seed: int) -> list:
                 S.ball((0, 2.6, top + 1.4), (2.6, 2.2, 1.6), spots),
                 S.hull([(-1.0, 3.8, top + 0.4), (-0.6, 3.8, top + 0.4), (-0.8, 4.0, top - 0.8)], S.mat(P.BONE)),
                 S.hull([(1.0, 3.8, top + 0.4), (0.6, 3.8, top + 0.4), (0.8, 4.0, top - 0.8)], S.mat(P.BONE))]
-    if kind == "oni":  # a red demon mask with horns over a kabuto
-        red = S.mat(P.hexrgb("#a01a14"), shine=0.6, gloss=24, vivid=0.7)
-        lac = P.metal(P.hexrgb("#1c181c"), seed=seed, shine=0.8)
-        return [S.ball((0, 0.2, top + 0.2), (3.9, 4.1, 3.4), lac).clip((0, 0, -1), -0.4),
-                S.rod((0, 0.2, top - 0.6), (0, -0.6, top - 3.2), 4.8, lac, 5.6, capped=False),
-                S.ball((0, 3.1, top - 3.2), (2.6, 1.0, 2.4), red),
-                S.hull([(-1.2, 3.7, top - 4.6), (1.2, 3.7, top - 4.6), (0, 3.9, top - 5.4)], S.mat(P.BONE)),
-                S.rod((-2.0, 0.6, top + 2.4), (-3.4, 1.2, top + 6.6), 0.7, S.mat(P.GOLD, shine=0.8), 0.15),
-                S.rod((2.0, 0.6, top + 2.4), (3.4, 1.2, top + 6.6), 0.7, S.mat(P.GOLD, shine=0.8), 0.15)]
-    if kind == "viking":
-        return [S.ball((0, 0.3, top + 0.2), (3.75, 3.95, 3.6), dark_iron).clip((0, 0, -1), 0.3),
-                S.block((-2.4, 3.8, top - 2.2), (2.4, 4.3, top - 1.2), dark_iron)]
-    if kind == "tricorn":
+    if kind == "oni":  # a lacquered kabuto, its neck guard flaring behind, a red demon mask over mouth and chin
+        red = S.mat(P.hexrgb("#8a1a14"), shine=0.2, gloss=16, vivid=0.7)
+        lac = P.metal(P.hexrgb("#2e1e1a"), rust=0.3, seed=seed, shine=0.2)
+        horn = P.metal(P.hexrgb("#8a6a3a"), rust=0.4, seed=seed, shine=0.25)
+        out = [S.ball((0, yc, zc + 0.5 * k), (3.35 * k, 3.6 * k, 3.0 * k), lac).clip((0, 0, -1), 0.15 * k),
+               S.ball((0, yc - 0.3, n + 3.9 * k), (4.3 * k, 4.4 * k, 2.6 * k), lamellar(seed))  # the neck guard
+               .clip((0, 1, 0), 1.0 * k).clip((0, 0, 1), 0.9 * k),
+               S.Ellipsoid(red, S._orient((0, 2.5 * k, n + 2.0 * k)), radii=(1.9 * k, 0.95 * k, 1.25 * k))]
+        for sx in (1, -1):
+            out += [S.hull([(sx * 0.9, 3.25 * k, n + 1.7 * k), (sx * 0.45, 3.25 * k, n + 1.7 * k),
+                            (sx * 0.68, 3.4 * k, n + 0.9 * k)], S.mat(P.BONE)),  # fangs
+                    S.rod((sx * 1.4, 1.4, n + 6.6 * k), (sx * 2.7, 2.0, n + 9.4 * k), 0.55, horn, 0.12)]
+        return out
+    if kind == "viking":  # a rounded cap, spectacles round the eyes and a guard down the nose: the face shows
+        out = [S.ball((0, yc, zc + 0.6 * k), (3.2 * k, 3.45 * k, 3.0 * k), iron).clip((0, 0, -1), 0.3 * k),
+               S.block((-0.28 * k, 3.4 * k, n + 2.9 * k), (0.28 * k, 3.75 * k, n + 4.6 * k), iron)]
+        for sx in (1, -1):
+            out.append(S.rod((sx * 0.35, 3.15 * k, n + 3.0 * k), (sx * 2.2, 2.4 * k, n + 3.25 * k), 0.26, iron))
+        return out
+    if kind == "tricorn":  # on top of the head, the brim above the brow
         hat = S.mat(P.hexrgb("#1a1618"))
-        return [S.rod((0, 0.3, top - 0.2), (0, 0.3, top + 0.3), 5.6, hat), S.ball((0, 0.3, top + 0.3),
-                                                                                (3.2, 3.2, 2.2), hat),
-                S.ball((0, 0.3, top + 0.35), (5.4, 5.4, 0.6), P.team(0.5)).clip((0, 0, -1), -0.2)]
+        return [S.rod((0, yc, n + 4.9 * k), (0, yc, n + 5.4 * k), 4.7 * k, hat),
+                S.ball((0, yc, n + 5.6 * k), (3.0 * k, 3.15 * k, 2.1 * k), hat).clip((0, 0, -1), 0.4 * k),
+                S.ball((0, yc, n + 5.45 * k), (4.5 * k, 4.5 * k, 0.6), P.team(0.5)).clip((0, 0, -1), -0.2)]
     return []
 
 
@@ -886,38 +944,50 @@ def person(key: str, name: str, replaces: str, b: Body, g: Gear = Gear(), attack
     h, sh = b.hip, b.shoulder
     lx, ax = b.leg_x, b.arm_x
 
+    bony = b.kind in ("skeleton", "calavera")
+    beast = b.kind in ("werewolf", "imp", "batman", "ghoul")
+    clad = g.cloth in ("tunic", "rags") and not bony and not beast and b.kind != "mummy"
+
     def leg(nm, x):
         shapes = []
         if not b.floating:
-            knee = (x, 0.3, h * 0.54)
-            ankle = (x, 0.0, 1.4)
-            thick = {"werewolf": 1.3, "imp": 0.95, "batman": 1.0}.get(b.kind, 0.85)
-            shapes = _limb_shapes(b, (x, 0, h - 0.4), knee, thick, thick * 0.82) + \
-                _limb_shapes(b, knee, ankle, thick * 0.82, thick * 0.66)
-            foot_m = b.skin if b.kind not in ("knight",) else P.metal(P.hexrgb("#2a262e"), seed=seed)
-            if g.armour == "plate" and b.kind != "knight":
-                foot_m = P.metal(PLATE, rust=0.75, seed=seed)
-            shapes.append(S.ball((x, 1.0, 0.7), (1.05, 1.9, 0.8), foot_m))
-            if b.kind == "knight" or g.armour == "plate":
-                shapes += S.limb((x, 0.2, h * 0.54 + 1.4), (x, 0.0, 2.0), 1.05, foot_m, 0.9)
+            hipj, knee, ankle = (x, 0.0, h - 0.4), (x, 0.4, h * 0.52), (x, 0.0, 1.3)
+            if bony:
+                shapes = A.bone(hipj, knee, 0.42, b.skin) + A.bone(knee, ankle, 0.36, b.skin) + \
+                    A.foot(x, b.skin, bony=True)
+            elif b.kind == "knight" or g.armour == "plate":
+                metal = P.metal(KNIGHT_PLATE if b.kind == "knight" else PLATE, rust=0.6, seed=seed, shine=0.15)
+                shapes = A.muscle(hipj, knee, 1.3, 0.9, metal, 0.4, 1.12) + \
+                    A.muscle(knee, ankle, 0.95, 0.65, metal, 0.32, 1.15, back=0.3) + \
+                    [S.Ellipsoid(metal, S._orient((x, 0.75, h * 0.52)), radii=(0.95, 0.6, 0.9))] + \
+                    A.foot(x, metal, "boot")
+            else:
+                thick = {"werewolf": 1.35, "imp": 0.95, "batman": 1.05, "ghoul": 0.85}.get(b.kind, 1.0)
+                shapes = A.muscle(hipj, knee, 1.25 * thick, 0.78 * thick, b.skin, 0.35, 1.15) + \
+                    A.muscle(knee, ankle, 0.8 * thick, 0.48 * thick, b.skin, 0.3, 1.2, back=0.35)
+                if clad:  # loose breeches to the shin, and boots
+                    pants = cloth(P.hexrgb("#3e3830") if g.cloth == "rags" else DRAB[(seed + 1) % len(DRAB)] * 0.8,
+                                  seed=seed + 3)
+                    shapes += A.trouser(hipj, knee, 1.5 * thick, 1.15 * thick, pants) + \
+                        A.trouser(knee, (x, 0.05, 3.6), 1.15 * thick, 1.0 * thick, pants)
+                    shapes += A.foot(x, S.mat(P.hexrgb("#3a2818"), shine=0.1), "boot")
+                else:
+                    shapes += A.foot(x, b.skin, "bare", claws=beast)
         return Part(nm, pivot=(x, 0, h), boxes=shapes)
 
     torso_shapes = []
-    if b.kind in ("skeleton", "calavera"):
+    if bony:
         from .undead import _ribs_material
-        torso_shapes += [S.ball((0, 0, h + 0.4), (3.2, 2.0, 1.5), b.skin)]
-        torso_shapes += [S.ball((0, -0.8, z), (0.75, 0.75, 0.55), b.skin) for z in np.linspace(h + 1.6, sh - 2.0, 5)]
-        torso_shapes.append(S.ball((0, 0.2, sh - 3.2), (3.6, 2.7, 3.9), _ribs_material(seed)).clip((0, 0, -1), 2.6))
-        torso_shapes.append(S.rod((-ax + 0.6, 0.1, sh + 0.6), (ax - 0.6, 0.1, sh + 0.6), 0.55, b.skin))
-    elif b.kind == "knight":
-        plate = P.metal(P.hexrgb("#2e2a32"), rust=0.3, seed=seed, shine=0.7)
-        torso_shapes += [S.ball((0, 0.2, sh - 3.4), (4.1, 3.0, 4.6), plate),
-                         S.rod((0, 0, h + 1.0), (0, 0, h - 2.6), 3.6, plate, 4.0)]
+        torso_shapes += A.skeleton_torso(b.skin, _ribs_material(seed), h, sh, ax)
+    elif b.kind == "knight":  # blackened plate under a torn surcoat in the owner's colour, a ragged black mantle
+        plate = P.metal(KNIGHT_PLATE, rust=0.5, seed=seed, shine=0.15)
+        torso_shapes += A.torso("knight", plate, h, sh, ax)
+        torso_shapes += A.drape(team_cloth(0.45, seed), h + 2.0, h - 6.0, 3.0, 3.8, seed, 11) + \
+            A.belt(h + 2.0, 3.0, S.mat(P.hexrgb("#2a1a12")), seed, False)
+        torso_shapes += A.drape(cloth(P.hexrgb("#1e1a1c"), seed=seed + 4), sh + 1.2, sh - 3.4, 2.4, 4.9, seed + 4,
+                                12)
     else:
-        chest_r = {"werewolf": (4.4, 3.2, 5.0), "imp": (3.2, 2.4, 3.6), "ghoul": (3.2, 2.4, 4.4),
-                   "vampire": (3.6, 2.4, 4.4)}.get(b.kind, (3.6, 2.6, 4.4))
-        torso_shapes += [S.ball((0, 0.2, sh - 3.6), chest_r, b.skin),
-                         S.ball((0, 0.2, h + 1.6), (3.0, 2.2, 2.8), b.skin)]
+        torso_shapes += A.torso(b.kind, b.skin, h, sh, ax)
     torso_shapes += _armour_shapes(b, g, seed) + _cloth_shapes(b, g, seed)
     if b.kind == "imp":  # a tail
         tail_m = b.skin
@@ -930,7 +1000,7 @@ def person(key: str, name: str, replaces: str, b: Body, g: Gear = Gear(), attack
     if g.back == "wings" or b.kind in ("batman", "imp"):  # folded leathery wings on the back
         wing = S.Material(color=lambda l: P.mix(P.hexrgb("#6a3430"), P.hexrgb("#2a1214"),
                                                 0.4 + 0.4 * P.noise(l.p, 1.5, seed)), vivid=0.2)
-        size = 1.0 if b.kind != "imp" else 0.6
+        size = 1.0 if b.kind != "imp" else 0.85
         for sx in (1, -1):
             torso_shapes.append(S.hull([(sx * 1.0, -2.4, sh + 0.5), (sx * 1.2, -2.8, sh - 1.0),
                                         (sx * 6.5 * size, -4.2, sh + 4.5 * size), (sx * 5.0 * size, -3.6, h - 2.0),
@@ -956,18 +1026,31 @@ def person(key: str, name: str, replaces: str, b: Body, g: Gear = Gear(), attack
                          S.ball((0, 3.1, sh - 1.0), 0.45, S.mat(P.BLOOD, shine=0.8, glow=0.3))]  # a red brooch
 
     def arm(nm, x, sign, item_name, item):
-        elbow = (x + sign * 0.3, 0.4, sh - 5.0)
+        elbow = (x + sign * 0.3, 0.45, sh - 5.0)
         hand = np.array([x + sign * 0.2, 0.9, sh - 9.4])
-        thick = {"werewolf": 1.15, "ghoul": 0.7, "knight": 1.05}.get(b.kind, 0.85)
+        wrist = hand + (0, -0.15, 0.75)
+        thick = {"werewolf": 1.2, "ghoul": 0.78, "knight": 1.1, "imp": 0.9}.get(b.kind, 1.0)
+        shoulder = (x, 0, sh - 0.3)
         shapes = []
-        if b.kind in ("skeleton", "calavera"):
-            shapes.append(S.ball((x, 0, sh), 1.0, b.skin))
-        shapes += _limb_shapes(b, (x, 0, sh - 0.3), elbow, thick, thick * 0.85) + \
-            _limb_shapes(b, elbow, tuple(hand), thick * 0.85, thick * 0.72)
         hand_m = b.skin
-        if b.kind == "knight" or g.armour == "plate":
-            hand_m = P.metal(P.hexrgb("#2a262e") if b.kind == "knight" else PLATE, rust=0.75, seed=seed)
-            shapes += S.limb((x, 0, sh - 0.8), elbow, thick * 1.25, hand_m, thick * 1.15)
+        glove = None
+        if bony:
+            shapes += A.bone(shoulder, elbow, 0.38, b.skin) + A.bone(elbow, tuple(wrist), 0.32, b.skin)
+        elif b.kind == "knight" or g.armour == "plate":
+            glove = P.metal(KNIGHT_PLATE if b.kind == "knight" else PLATE, rust=0.6, seed=seed, shine=0.15)
+            shapes += A.muscle(shoulder, elbow, 1.05 * thick, 0.8 * thick, glove, 0.4, 1.15) + \
+                A.muscle(elbow, tuple(wrist), 0.8 * thick, 0.55 * thick, glove, 0.3, 1.12) + \
+                [S.Ellipsoid(glove, S._orient(tuple(np.asarray(elbow) + (0, -0.35, 0))), radii=(0.9, 0.8, 0.85))]
+        else:
+            shapes += A.deltoid(shoulder, sign, 0.95 * thick, b.skin) + \
+                A.muscle(shoulder, elbow, 0.95 * thick, 0.68 * thick, b.skin, 0.42, 1.16) + \
+                A.muscle(elbow, tuple(wrist), 0.7 * thick, 0.45 * thick, b.skin, 0.3, 1.14)
+            if clad:  # a loose sleeve over the upper arm
+                shapes += A.sleeve(shoulder, elbow, 1.15 * thick, A_SLEEVE.get(g.cloth, cloth(DRAB[seed % len(DRAB)],
+                                                                                             seed=seed)))
+        if g.armour == "mail":  # the mail shirt's short sleeve
+            short = tuple(np.asarray(shoulder) + (np.asarray(elbow) - shoulder) * 0.55)
+            shapes += A.sleeve(shoulder, short, (0.95 if bony else 1.2) * thick, chainmail(seed=seed), 1.3)
         if g.cloth in ("robe", "wraps", "dress", "shroud"):  # wide sleeves, the robe's colour
             sleeve = {"robe": cloth(P.hexrgb("#24202a"), seed=seed), "wraps": cloth(P.hexrgb("#38586a"), seed=seed),
                       "dress": replace(ghostly(P.hexrgb("#7aa6ea"), seed + 2), vivid=0.9) if b.kind in ("ghost", "banshee")
@@ -975,11 +1058,8 @@ def person(key: str, name: str, replaces: str, b: Body, g: Gear = Gear(), attack
                       "shroud": spectral(10.0, seed + 2)}[g.cloth]
             shapes.append(S.rod((x, 0, sh - 0.4), (x + sign * 0.5, 0.6, sh - 7.2), thick * 1.5, sleeve,
                                 thick * 2.4))
-        shapes.append(S.ball(tuple(hand), (0.8, 0.95, 1.0), hand_m))
-        if b.kind in ("werewolf", "banshee", "ghoul", "batman"):  # claws
-            for k in (-1, 0, 1):
-                shapes.append(S.rod(hand + (k * 0.4, 0.4, -0.6), hand + (k * 0.5, 1.4, -1.8), 0.18,
-                                    S.mat(P.hexrgb("#e8e0d0")), 0.02))
+        shapes += A.hand(hand, sign, hand_m, claws=b.kind in ("werewolf", "banshee", "ghoul", "batman", "imp"),
+                         bony=bony, glove=glove)
         part = Part(nm, pivot=(x, 0, sh), rot=(b.arms_out, 0, 0), boxes=shapes)
         if item:
             part.add(Part(item_name, pivot=tuple(hand), boxes=_moved_all(item, hand)))
@@ -1006,6 +1086,11 @@ def person(key: str, name: str, replaces: str, b: Body, g: Gear = Gear(), attack
                     (-3.6, -3.0, sh + 0.6), (3.6, -3.0, sh + 0.6), (-4.6, -4.0, h - 7.0), (4.6, -4.0, h - 7.0)],
                    team_cloth(0.45, seed))]))
     root = Part("root").add(torso, leg("leg_r", lx), leg("leg_l", -lx))
+    todo = [root]
+    while todo:  # whatever else is made of the skin (heads, ears, tails, the neck) melts into the body too
+        part = todo.pop()
+        todo += part.children
+        A.soft([s for s in part.boxes if isinstance(s, S.Shape) and s.material is b.skin], "flesh")
     if b.floating:
         root.offset = (0.0, 0.0, 2.5)
     return Unit(key, name, replaces, rig, root, group=group, attack=attack, civ=civ, scale=scale,

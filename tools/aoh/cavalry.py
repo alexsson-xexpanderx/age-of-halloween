@@ -23,6 +23,7 @@ from typing import Optional
 
 import numpy as np
 
+from . import anatomy as A
 from . import creatures as C
 from . import paint as P
 from . import pumpkins as PK
@@ -219,7 +220,7 @@ def steed(kind: str, seed: int = 0, barding: Optional[str] = None, saddle: bool 
             body_shapes += [S.rod((sx * 3.0, -0.8, sz), (sx * 3.6, -0.6, sz - 6.0), 0.18, leather),
                             S.torus((sx * 3.6, -0.6, sz - 6.6), 0.7, 0.18, iron, rot=(0, 90, 0))]
     if barding == "plate":  # a peytral over the chest, a crinet down the neck (below), riveted dark plate
-        plate = P.metal(P.hexrgb("#3a363e"), rust=0.4, seed=seed, shine=0.7)
+        plate = P.metal(C.KNIGHT_PLATE, rust=0.5, seed=seed, shine=0.15)
         body_shapes += [S.Ellipsoid(plate, S._orient((0, 6.4, back - 3.8)), radii=(3.95, 3.7, 4.0)).clip((0, -1, 0), -6.4),
                         S.Ellipsoid(plate, S._orient((0, -6.4, back - 2.4)), radii=(4.2, 4.6, 4.1))
                         .clip((0, 1, 0), -6.6).clip((0, 0, -1), -(back - 6.0))]
@@ -260,7 +261,7 @@ def steed(kind: str, seed: int = 0, barding: Optional[str] = None, saddle: bool 
                for f in np.linspace(0.1, 1, 5)]
         head_shapes += _flames(pts, 1.8, FLAME, seed)
     if barding == "plate":  # a crinet down the neck, a chanfron over the face with a spike
-        plate = P.metal(P.hexrgb("#3a363e"), rust=0.4, seed=seed, shine=0.7)
+        plate = P.metal(C.KNIGHT_PLATE, rust=0.5, seed=seed, shine=0.15)
         M = neck_top + np.array([0, 5.2, -3.6])
         head_shapes += [S.rod(tuple(base + (0, -0.4, 1.0)), tuple(neck_top + (0, -0.6, 0.6)), 2.4, plate, 1.4)
                         .clip((0, 1, 0), 0.0),
@@ -298,6 +299,11 @@ def steed(kind: str, seed: int = 0, barding: Optional[str] = None, saddle: bool 
             x, y = lg.pivot[0], lg.pivot[1]
             lg.boxes += _flames([(x, y + 0.4, 0.3)], 1.3, FLAME, seed + int(x * 10 + y))
     root.add(body_part, *legs)
+    todo = [root]
+    while todo:  # the barrel, chest, croup, shoulders, thighs, neck and head melt into one horse (sculpt.BLEND)
+        part = todo.pop()
+        todo += part.children
+        A.soft([s for s in part.boxes if isinstance(s, S.Shape) and s.material is skin], "bone" if bony else "flesh")
     if kind == "ghosthorse":
         root.offset = (0.0, 0.0, 1.5)
     return root

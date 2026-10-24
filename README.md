@@ -63,11 +63,13 @@ python tools/style_sheet.py          # previews/style.png
 
 ```
 tools/aoh/sculpt.py      the ray tracer: smooth shapes (spheres, rods, turned shapes, blocks, cut by planes), the
-                         night's light, glowing materials, ink lines; draws Age of Minecraft's boxes too
+                         night's light, glowing materials, ink lines, the pieces of one body melted into one
+                         surface; draws Age of Minecraft's boxes too
 tools/aoh/paint.py       materials: pumpkin, wood, bricks, shingles, bone, bark, team cloth, metal, noise
 tools/aoh/geometry.py    model parts and poses (shared with the old box models)
 tools/aoh/animation.py   rigs and attack styles: stand / walk / attack / die / carry poses
 tools/aoh/creatures.py   bodies (skeleton, zombie, phantom, ghoul, imp, werewolf, mummy, vampire, ghost...) and their gear
+tools/aoh/anatomy.py     body parts that look alive: muscled limbs, hands, feet, torsos, clothes that hang
 tools/aoh/infantry.py    villagers, monk, king, foot soldiers, archers and the foot unique units
 tools/aoh/cavalry.py     nightmares and bone horses and their riders, the Headless Horseman
 tools/aoh/engines.py     coffin rams, bone catapults and ballistae, the bombard, the trebuchet, the hearse, the ghost train
