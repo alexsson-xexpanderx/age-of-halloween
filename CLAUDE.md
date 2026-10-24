@@ -135,7 +135,10 @@ putting `tools/` on `sys.path`.
      attacks, armours and sounds written over its own in place, resource capacity 1 (`GIANT_CARRY`: UserPatch 1.5
      otherwise blows up units 440, 527, 528 and 706 on their first attack), and an unused graphic (`GIANT_GRAPHICS`, found by
      `giant_graphic`) pointed at his new SLP (`giant_slp`, in red-team palette shades, written next to Pac-Man's
-     sounds), as the Saboteur shares the Petard's sprites. The Wonder also trains the dragon (`gameplay._dragon`), in
+     sounds), as the Saboteur shares the Petard's sprites. He is a walking haunted castle (`colossus.py`, rig
+     "walker" in animation.py: at rest on its rock, legs hidden; walking on six spider legs): his walking graphic is
+     a second free one of `GIANT_GRAPHICS`, made `GIANT_WALK_FRAMES` frames a direction (sequence 3), its SLP taken
+     after the volcano's so the other ids stay. The Wonder also trains the dragon (`gameplay._dragon`), in
      the never-used Advanced Heavy Crossbowman's slot (493): its own sprites (slpmap), every terrain, its shots
      (508, and 520 after Chemistry) drawn by an unused graphic (`FIRE_GRAPHICS`) pointed at a new fireball SLP
      (`fireball_slp`), its texts by `name_dragon`.

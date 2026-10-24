@@ -243,10 +243,10 @@ next to your Town Center:
 
 | Cheat | You get |
 |---|---|
-| `furious the monkey boy` | **Pac-Man**, the jack-o'-lantern, who chomps as he runs and attacks |
+| `furious the monkey boy` | **Pac-Man**, the carved jack-o'-lantern with a brain in his mouth, who chomps as he runs and attacks |
 | `i love the monkey head` | a bedsheet **ghost** in your team colour |
 | `how do you turn this on` | the Cobra Car as a **hot-rod hearse** in your team colour, flames painted on its sides |
-| `to smithereens` | a **giant Pac-Man**, an old rotting pumpkin with vines and a meaner grin, bigger than a Castle and a Wonder side by side: Pac-Man's bite and armour, 10000 hit points, and he no longer blows himself up. He boards and leaves Transport Ships, and takes as much room on the map as a Mangonel, so he fits through gates; his picture covers everything near him |
+| `to smithereens` | a **giant Pac-Man**, a red haunted castle that sits on its rock and, when it walks, rises and strides on six spider legs: Pac-Man's bite and armour, 10000 hit points, and he no longer blows himself up. He boards and leaves Transport Ships, and takes as much room on the map as a Mangonel, so he fits through gates; his picture covers everything near him |
 
 In a multiplayer game, cheats only work if "Allow cheats" is ticked in the
 game setup.

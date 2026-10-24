@@ -400,6 +400,7 @@ def fake_game(root: Path) -> Path:
     saboteur = len(table)  # the Saboteur borrows the Petard's sprites; old Trade Cog and Galley pieces no one uses
     table += [{"name": "HDSQD_FN", "slp": 4497, "frames": 10, "angles": 8, "mirror": 6},
               {"name": "COGXX_F1", "slp": 2909, "frames": 1, "angles": 8, "mirror": 6},
+              {"name": "COGXX_A1", "slp": 2905, "frames": 1, "angles": 8, "mirror": 6},
               {"name": "GALLY_A1", "slp": 2937, "frames": 1, "angles": 8, "mirror": 6},
               {"name": "CARTSTPS", "slp": 4710, "frames": 5, "angles": 8, "mirror": 6}]  # the cart tracks
     boar = len(table)
@@ -566,14 +567,18 @@ def test_full_build(tmp: Path):
         assert sab.values["outline_size"][:2] == (2.5, 2.5)
         # UserPatch blows the Saboteur's unit up on its first attack unless it carries 1 and lacks flag 32
         assert sab.values["resource_capacity"] == 1 and sab.values["hero_status"] == 1
-        assert sab.values["standing"][0] == sab.values["walking"][0] == sab.values["attack_graphic"]
+        assert sab.values["standing"][0] == sab.values["attack_graphic"] != sab.values["walking"][0]
     from aoh.datfile import read_graphics
     giant = read_graphics((mod / "Data" / "empires2_x1_p1.dat").read_bytes())[units.units[1][706].values["standing"][0]]
     assert giant.name == "COGXX_F1" and giant.slp == 15600  # a free graphic, pointed at his own SLP
     frames = slp.decode(Drs(mod / "Data" / "gamedata_x1_p1.drs").get(15600))
-    assert len(frames) == 5 and min(f.pixels.shape[0] for f in frames) > 900  # far bigger than a Wonder
+    assert len(frames) == 5 and min(f.pixels.shape[0] for f in frames) > 300  # a castle, at rest on its rock
     plain = frames[1].pixels[frames[1].pixels >= 0]
-    assert len(plain) > 200_000 and not (frames[1].pixels >= slp.PLAYER).any()  # a pumpkin, the same for everyone
+    assert len(plain) > 50_000 and not (frames[1].pixels >= slp.PLAYER).any()  # red for everyone
+    walker = read_graphics((mod / "Data" / "empires2_x1_p1.dat").read_bytes())[units.units[1][706].values["walking"][0]]
+    assert (walker.name, walker.slp, walker.frame_count, walker.sequence_type) == ("COGXX_A1", 15606, 6, 3)
+    strides = slp.decode(Drs(mod / "Data" / "gamedata_x1_p1.drs").get(15606))
+    assert len(strides) == 5 * 6 and strides[0].pixels.shape[1] > frames[0].pixels.shape[1]  # on its legs, wider
     assert "Giant Pac-Man: the Saboteur" in report
     heads = datunits.read_unit_headers(datunits.decompress((mod / "Data" / "empires2_x1_p1.dat").read_bytes()), units)
     assert [(t[1], t[3], t[4]) for t in heads.tasks[860]] == [(0, 7, -1), (1, 3, 20)]  # the Militia's boarding task

@@ -14,7 +14,7 @@ from . import beasts, cavalry, engines, ghostships, infantry, pumpkins
 # the Halloween models, under the keys of the Minecraft ones they replace (every key has one)
 HALLOWEEN: dict[str, Callable[[], Unit]] = {
     **infantry.FOOT, **cavalry.MOUNTED, **engines.SIEGE, **ghostships.SHIPS, **beasts.ANIMALS, **beasts.EASTER,
-    "pacman": pumpkins.pacman,  # (the giant is drawn by gameplay.giant_slp, from pumpkins.giant_pacman)
+    "pacman": pumpkins.pacman,  # (the giant is drawn by gameplay.giant_slp, from colossus.walking_castle)
 }
 
 ROSTER: dict[str, Callable[[], Unit]] = {**FOOT, **MOUNTED, **SIEGE, **SHIPS, **ANIMALS, **EASTER, **HALLOWEEN}

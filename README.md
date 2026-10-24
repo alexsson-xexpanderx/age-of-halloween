@@ -73,7 +73,8 @@ tools/aoh/cavalry.py     nightmares and bone horses and their riders, the Headle
 tools/aoh/engines.py     coffin rams, bone catapults and ballistae, the bombard, the trebuchet, the hearse, the ghost train
 tools/aoh/ghostships.py  ghost ships, the ferry of the dead, the coffin bomb
 tools/aoh/beasts.py      animals, and the ghost, the hot-rod hearse and the Bone Dragon
-tools/aoh/pumpkins.py    Pac-Man and the giant Pac-Man as jack-o'-lanterns, and small lanterns
+tools/aoh/pumpkins.py    Pac-Man as a carved jack-o'-lantern with a brain in his mouth, and small lanterns
+tools/aoh/colossus.py    the giant Pac-Man: a haunted castle that walks on six spider legs
 tools/aoh/undead.py      skulls and bones
 tools/aoh/roster.py      the full roster and preview groups
 tools/aoh/haunted.py     the five haunted cultures (kits per age) and the parts buildings are made of

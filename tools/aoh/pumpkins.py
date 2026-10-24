@@ -2,7 +2,9 @@
 small lanterns for the buildings and fields.
 
 Pac-Man keeps his parts and the "pacman" rig (animation.py): the pumpkin is cut in two at the mouth (`jaw_top`,
-`jaw_bottom`, hinged at its centre), so chomping opens it on the candle-lit inside. Jagged teeth line both halves and
+`jaw_bottom`, hinged at the cut), so chomping opens it. His mouth is cut low, under a carved nose, so he reads as a
+jack-o'-lantern rather than a ball cut in half, and in it lies a brain, lit from inside (the player asked); the giant
+keeps his cut through the middle and his candle. Jagged teeth line both halves and
 interlock when the mouth shuts; the angry eyes are carved openings glowing with the same light. His stem carries a
 leaf in his owner's colour. "pop" is his death: the pumpkin bursts into glowing shards.
 """
@@ -155,36 +157,61 @@ class PumpkinLook:
 
 
 SCARY = PumpkinLook()
+# Pac-Man himself: a carved jack-o'-lantern rather than a ball cut in half (the player asked, 2026-10-24): a little
+# taller than wide, deep ribs, angry eyes, a carved nose, crooked teeth, the cut low under the nose
+JACK = PumpkinLook(rot=0.25, eyes=(((10, 32), (46, 50), (32, 10)),), nose=(((-7, 2), (7, 2), (0, 15)),), teeth=7,
+                   tooth_length=2.2, crooked=0.9, squash=1.02, seed=3)
 SCARIER = PumpkinLook(base=P.hexrgb("#d9640e"), dark=P.hexrgb("#8a3206"), rot=0.9, glow=P.hexrgb("#ffb030"),
                       eyes=(((12, 30), (50, 50), (34, 6)),), nose=(((-6, 2), (6, 2), (0, 15)),), teeth=11,
                       tooth_length=3.0, crooked=1.0, squash=0.86, seed=7)
 
 
+def brain(seed: int = 0) -> S.Material:
+    """A brain: pink-grey and glistening, folded in winding ridges with dark grooves between them."""
+    def color(look):
+        p = look.p
+        g = np.abs(np.sin(p[:, 0] * 2.6 + p[:, 1] * 1.4 + P.noise(p, 1.1, seed) * 5.0))
+        c = P.mix(P.hexrgb("#e2a0aa"), P.hexrgb("#a45a6a"), P.fbm(p, 1.6, seed + 1) * 0.6)
+        return np.where((g < 0.28)[:, None], P.hexrgb("#4a1420"), c)
+    return S.Material(color=color, glow=0.18, shine=0.7, gloss=30, vivid=0.85)
+
+
 def pumpkin_head(look: PumpkinLook = SCARY, radius: float = R, centre: float = R + 1.0, team_leaf: bool = True,
-                 vines: bool = False) -> tuple[Part, Part, Part]:
-    """The two jaws and the burst, around a pumpkin centred `centre` above the ground."""
+                 vines: bool = False, split: float = 0.0, with_brain: bool = False) -> tuple[Part, Part, Part]:
+    """The two jaws and the burst, around a pumpkin centred `centre` above the ground. `split` lowers the mouth's
+    cut below the middle (a fraction of the radius); `with_brain` puts a brain in the mouth instead of the candle."""
     feats = [tri for e in look.eyes for tri in (e, tuple((-u, v) for u, v in e))] + list(look.nose)
     skin = face_material(feats, look.base, look.dark, look.rot, look.seed, look.glow)
     plain = face_material([], look.base, look.dark, look.rot, look.seed + 1, look.glow)
     radii = (radius * 1.06, radius, radius * look.squash)
-    hollow = inside(radius, look.glow)
+    s = split * radius  # the cut, this far below the middle
+    rim = radius * math.sqrt(max(0.05, 1 - (s / radii[2]) ** 2))  # the pumpkin's radius at the cut
+    hollow = inside(rim, look.glow)
     skin.cut = hollow
     plain.cut = hollow
-    upper = S.Ellipsoid(skin, S._orient((0, 0, centre)), radii=radii).clip((0, 0, -1), 0.0)
-    lower = S.Ellipsoid(plain, S._orient((0, 0, centre)), radii=radii).clip((0, 0, 1), 0.0)
-    top_teeth = [_moved(t, (0, 0, centre)) for t in _teeth(radius, -1, look.teeth, look.tooth_length,
-                                                           seed=look.seed, crooked=look.crooked)]
-    low_teeth = [_moved(t, (0, 0, centre)) for t in _teeth(radius, 1, look.teeth - 1, look.tooth_length * 0.85,
-                                                           arc=(-68, 68), offset=0.0, seed=look.seed + 1,
-                                                           crooked=look.crooked)]
-    flame = S.Ellipsoid(S.mat(P.hexrgb("#fff2a8"), glow=1.0), S._orient((0, 0, centre + 1.2)), radii=(0.9, 0.9, 1.8))
-    flame.casts = False
-    wick = S.rod((0, 0, centre - 0.2), (0, 0, centre + 0.6), 0.9, S.mat(P.hexrgb("#efe6c8"), glow=0.3))
-    upper_part = Part("jaw_top", pivot=(0, 0, centre), boxes=[upper, *top_teeth,
-                                                               *_stem(centre + radii[2] - 0.2, radius * 0.45,
-                                                                      radius * 0.18, radius * 0.13, team_leaf,
-                                                                      look.seed)])
-    lower_part = Part("jaw_bottom", pivot=(0, 0, centre), boxes=[lower, *low_teeth, wick, flame])
+    zc = centre - s
+    upper = S.Ellipsoid(skin, S._orient((0, 0, centre)), radii=radii).clip((0, 0, -1), s)
+    lower = S.Ellipsoid(plain, S._orient((0, 0, centre)), radii=radii).clip((0, 0, 1), -s)
+    top_teeth = [_moved(t, (0, 0, zc)) for t in _teeth(rim, -1, look.teeth, look.tooth_length,
+                                                       seed=look.seed, crooked=look.crooked)]
+    low_teeth = [_moved(t, (0, 0, zc)) for t in _teeth(rim, 1, look.teeth - 1, look.tooth_length * 0.85,
+                                                       arc=(-68, 68), offset=0.0, seed=look.seed + 1,
+                                                       crooked=look.crooked)]
+    if with_brain:  # a brain lying in the hollow of the lower jaw, lit from below
+        bm = brain(look.seed)
+        inner = [S.Ellipsoid(bm, S._orient((sx * rim * 0.24, rim * 0.08, zc + rim * 0.2), (0, sx * 8, 0)),
+                             radii=(rim * 0.27, rim * 0.5, rim * 0.3)) for sx in (1, -1)]
+        inner.append(S.Ellipsoid(bm, S._orient((0, -rim * 0.12, zc + rim * 0.06)), radii=(rim * 0.32, rim * 0.34,
+                                                                                         rim * 0.2)))
+    else:
+        flame = S.Ellipsoid(S.mat(P.hexrgb("#fff2a8"), glow=1.0), S._orient((0, 0, zc + 1.2)), radii=(0.9, 0.9, 1.8))
+        flame.casts = False
+        inner = [S.rod((0, 0, zc - 0.2), (0, 0, zc + 0.6), 0.9, S.mat(P.hexrgb("#efe6c8"), glow=0.3)), flame]
+    upper_part = Part("jaw_top", pivot=(0, 0, zc), boxes=[upper, *top_teeth,
+                                                           *_stem(centre + radii[2] - 0.2, radius * 0.45,
+                                                                  radius * 0.18, radius * 0.13, team_leaf,
+                                                                  look.seed)])
+    lower_part = Part("jaw_bottom", pivot=(0, 0, zc), boxes=[lower, *low_teeth, *inner])
     if vines:
         lower_part.boxes += _vines(radius, centre, look.seed)
     shards = []
@@ -231,7 +258,8 @@ def _vines(radius: float, centre: float, seed: int) -> list:
 
 
 def pacman(key: str = "pacman") -> Unit:
-    upper, lower, pop = pumpkin_head(SCARY)
+    """Pac-Man: a carved jack-o'-lantern, its mouth cut low under the nose, a brain in it instead of a candle."""
+    upper, lower, pop = pumpkin_head(JACK, split=0.38, with_brain=True)
     root = Part("root").add(Part("body").add(upper, lower), pop)
     return Unit(key, "Pac-Man", "Furious the Monkey Boy (cheat)", "pacman", root, group="easter",
                 attack="chomp", scale=2.4)

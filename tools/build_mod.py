@@ -1155,11 +1155,12 @@ def apply_gameplay(game: Game, mode: str, log, pacman: bool = True, javelina: bo
         sound_ids = {name: [next(free) for _ in variants] for name, variants in waves.items()}
     if dragon:
         roar_ids = {name: [next(free) for _ in variants] for name, variants in roars.items()}
-    pictures = free_resource_ids(game, raw, 6, start=GIANT_SLP)
+    pictures = free_resource_ids(game, raw, 7, start=GIANT_SLP)
     giant = next(pictures) if pacman else None  # the giant's own SLP
     fire = next(pictures) if dragon else None  # the dragon's fireball's
     track = next(pictures) if rails else None  # the rails the trains lay
     looks = tuple(next(pictures) for _ in range(3)) if volcano else None  # the volcano at rest, erupting, its bomb
+    walk = next(pictures) if pacman else None  # the giant walking (after the others, so their ids stay)
     volcano_icon, volcano_sheets = None, []
     if volcano:  # its icon, at the end of every copy of the four building icon sheets
         from aoh import volcano as volcanoes
@@ -1185,7 +1186,8 @@ def apply_gameplay(game: Game, mode: str, log, pacman: bool = True, javelina: bo
             lava_tiles = lava_map.encode(original, quant)
             colour = int(quant.indices(np.array([lava_map.MINIMAP]))[0])
             lava_dat = (next(free_resource_ids(game, raw, 1, start=LAVA_SLP)), colour)
-    patch, notes = gameplay.patch_dat(raw, game.graphics_table, pacman, javelina, icon, sound_ids, giant, giant_icon,
+    patch, notes = gameplay.patch_dat(raw, game.graphics_table, pacman, javelina, icon, sound_ids,
+                                      (giant, walk) if giant is not None else None, giant_icon,
                                       fire, dragon_icon, roar_ids, lava_dat, track,
                                       (looks, volcano_icon) if volcano else None)
     for note in notes:
@@ -1253,8 +1255,11 @@ def apply_gameplay(game: Game, mode: str, log, pacman: bool = True, javelina: bo
             touched[name] = drs
     if patch.giant_name is not None:  # the giant red Pac-Man's picture, where the game finds new files
         sound_drs.put(giant, gameplay.giant_slp(quant))
+        if patch.giant_walking:
+            sound_drs.put(walk, gameplay.giant_slp(quant, walking=True))
         touched[sound_name] = sound_drs
-        log(f"Giant Pac-Man: his picture is SLP {giant} in {sound_name}")
+        log(f"Giant Pac-Man: his picture is SLP {giant} in {sound_name}"
+            + (f", walking SLP {walk}" if patch.giant_walking else ""))
         name_giant(game, mode, patch.giant_name, log)
     for name, drs in touched.items():  # each archive written once
         tmp = game.data / (name + ".aoh-new")

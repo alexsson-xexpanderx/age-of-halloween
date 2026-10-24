@@ -315,6 +315,18 @@ def pose(unit, action: str, t: float) -> Pose:
             _add(p, "torso", rx=40 * math.cos(math.pi * u))
         else:
             _move(p, "root", dz=-2)
+    elif rig == "walker":  # the giant's haunted castle: sitting on its rock at rest, striding on six spider legs
+        from .colossus import LEGS, LIFT, ROCK
+        if action in ("walk", "carry"):
+            for k in range(LEGS):  # three legs at a time: each swings forward while lifted, back while down
+                ph = 2 * math.pi * (t + (0.5 if k % 2 else 0.0))
+                a = math.radians(30.0 + 60.0 * k)
+                lift = 16.0 * max(0.0, math.sin(ph))
+                _add(p, f"leg_{k}", rx=lift * math.sin(a), ry=-lift * math.cos(a), rz=14.0 * math.cos(ph))
+            _move(p, "castle", dz=1.0 * math.sin(4 * math.pi * t))
+        else:  # at rest (and biting, and dying): the legs folded away, the castle down on its rock
+            p.hidden |= {f"leg_{k}" for k in range(LEGS)}
+            _move(p, "castle", dz=-(LIFT - ROCK))
     elif rig == "pacman":  # chomp, chomp
         p.hidden |= {"pop"}
         if action == "idle":

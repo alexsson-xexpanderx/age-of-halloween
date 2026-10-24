@@ -85,6 +85,11 @@ GIANT_OUTLINE = 2.5
 # graphics no unit and no other graphic uses, each with an SLP of its own (old pieces of the Trade Cog and Galley); the
 # first one found becomes the giant's
 GIANT_GRAPHICS = ("COGXX_F1", "COGXX_A1", "COGXX_W1", "GALLY_F1", "GALLY_A1")
+# his walking picture (the castle striding on its legs): a second of GIANT_GRAPHICS, made 6 frames a direction, played
+# as the game's own walking graphics are (sequence type 3, about a tenth of a second a frame)
+GIANT_WALK_FRAMES = 6
+GIANT_WALK_RATE = 0.12
+GIANT_WALK_SEQUENCE = 3
 HELP_STRINGS = 79000  # the .dat stores help text ids 79000 above the string's id in the language files
 
 
@@ -96,6 +101,7 @@ class DatPatch:
     pacman_strings: dict[str, int] = None  # the Monkey Boy's text ids: name, creation, help (if Pac-Man was patched)
     sounds_added: bool = False  # the sound table has Pac-Man's sounds: their WAV files must be written too
     giant_name: Optional[int] = None  # the Saboteur's name string, if he became the giant (his SLP must be written)
+    giant_walking: bool = False  # he has a walking picture of his own (its SLP must be written too)
     dragon_strings: Optional[dict[str, int]] = None  # the dragon's text ids, if it was patched (its SLP must be written)
     fire_layout: Optional[tuple[int, int, bool]] = None  # its fireball's frames, angles and mirroring
     dragon_sounds_added: bool = False  # the sound table has the dragon's sounds: their WAV files must be written too
@@ -111,7 +117,7 @@ def wonder_pacman(raw: bytes, graphics: dict) -> tuple[Optional[DatPatch], str]:
 
 
 def patch_dat(raw: bytes, graphics: dict, pacman: bool = True, javelina: bool = True, icon: Optional[int] = None,
-              sounds: Optional[dict[str, list[int]]] = None, giant: Optional[int] = None,
+              sounds: Optional[dict[str, list[int]]] = None, giant=None,
               giant_icon: Optional[int] = None, fire: Optional[int] = None, dragon_icon: Optional[int] = None,
               dragon_sounds: Optional[dict[str, list[int]]] = None,
               lava: Optional[tuple[int, int]] = None,
@@ -144,9 +150,10 @@ def patch_dat(raw: bytes, graphics: dict, pacman: bool = True, javelina: bool = 
     if pac_done and sounds:
         table, msg = _sounds(data, civs, graphics, sounds)
         notes.append(msg)
-    giant_gid = giant_name = None
+    giant_gid = giant_name = walk_gid = None
+    giant, giant_walk = (giant if isinstance(giant, tuple) else (giant, None))
     if pac_done and giant is not None:  # after the sounds: he gets Pac-Man's
-        msg, giant_gid, giant_name = _giant(data, civs, graphics, giant, giant_icon)
+        msg, (giant_gid, walk_gid), giant_name = _giant(data, civs, graphics, giant, giant_icon, giant_walk)
         notes.append(msg)
     fire_gid = dragon_strings = roar_ids = None
     if fire is not None:  # in place, like the giant: before anything below grows the file
@@ -157,7 +164,7 @@ def patch_dat(raw: bytes, graphics: dict, pacman: bool = True, javelina: bool = 
             except (ValueError, struct.error) as exc:
                 notes.append(f"Dragon's sounds: not added, the sound table could not be read ({exc})")
         msg, fire_gid, dragon_strings = _dragon(data, civs, graphics, fire, dragon_icon,
-                                                {giant_gid} if giant_gid is not None else set(), roar_ids)
+                                                {g for g in (giant_gid, walk_gid) if g is not None}, roar_ids)
         changed |= fire_gid is not None
         notes.append(msg)
         if fire_gid is None:
@@ -244,6 +251,10 @@ def patch_dat(raw: bytes, graphics: dict, pacman: bool = True, javelina: bool = 
             return None, notes + ["not changed: the patched sound table did not read back as expected"]
     if giant_gid is not None and datfile.read_graphics(packed)[giant_gid].slp != giant:
         return None, notes + ["not changed: the giant Pac-Man's graphic did not read back as expected"]
+    if walk_gid is not None:
+        g = datfile.read_graphics(packed)[walk_gid]
+        if (g.slp, g.frame_count, g.sequence_type) != (giant_walk, GIANT_WALK_FRAMES, GIANT_WALK_SEQUENCE):
+            return None, notes + ["not changed: the giant Pac-Man's walking graphic did not read back as expected"]
     fire_layout = None
     if fire_gid is not None:
         g = datfile.read_graphics(packed)[fire_gid]
@@ -267,7 +278,8 @@ def patch_dat(raw: bytes, graphics: dict, pacman: bool = True, javelina: bool = 
                      (volcano[0][2], volcanoes.BOMB_FRAMES, 1, volcanoes.TUMBLING)]:
             return None, notes + ["not changed: the volcano's pictures did not read back as expected"]
     return DatPatch(packed, len(civs.units), notes, strings if pac_done else None, sounds_added=table is not None,
-                    giant_name=giant_name, dragon_strings=dragon_strings, fire_layout=fire_layout,
+                    giant_name=giant_name, giant_walking=walk_gid is not None, dragon_strings=dragon_strings,
+                    fire_layout=fire_layout,
                     dragon_sounds_added=roar_ids is not None, lava=lava_done, train_strings=train_strings,
                     volcano_strings=volcano_strings), notes
 
@@ -305,9 +317,9 @@ def _pacman(data: bytearray, civs, graphics: dict, icon: Optional[int]) -> tuple
             + "; he walks on beaches like the Militia, so ships can unload him"), strings
 
 
-def giant_graphic(graphics: dict, civs) -> Optional[int]:
-    """A graphic for the giant: one of GIANT_GRAPHICS that no unit and no other graphic uses, with an SLP of its own
-    and one picture for each of 8 directions (mirrored), as he has."""
+def giant_graphic(graphics: dict, civs, taken=()) -> Optional[int]:
+    """A graphic for the giant: one of GIANT_GRAPHICS that no unit and no other graphic uses (nor `taken`), with an SLP
+    of its own and one picture for each of 8 directions (mirrored), as he has."""
     used = set()
     for units in civs.units:
         for u in units:
@@ -320,18 +332,23 @@ def giant_graphic(graphics: dict, civs) -> Optional[int]:
         sharing[g.slp] = sharing.get(g.slp, 0) + 1
     for name in GIANT_GRAPHICS:
         for gid, g in graphics.items():
-            if (g.name.upper() == name and gid not in used and not g.deltas and g.slp > 0 and sharing[g.slp] == 1
-                    and g.angle_count == 8 and g.mirroring and g.frame_count == 1 and g.slp_at >= 0):
+            if (g.name.upper() == name and gid not in used and gid not in taken and not g.deltas and g.slp > 0
+                    and sharing[g.slp] == 1 and g.angle_count == 8 and g.mirroring and g.frame_count == 1
+                    and g.slp_at >= 0):
                 return gid
     return None
 
 
-def _giant(data: bytearray, civs, graphics: dict, slp_id: int,
-           icon: Optional[int] = None) -> tuple[str, Optional[int], Optional[int]]:
-    """The Saboteur becomes the giant red Pac-Man, with icon `icon` if given: (note, his graphic, his name string)."""
+def _giant(data: bytearray, civs, graphics: dict, slp_id: int, icon: Optional[int] = None,
+           walk_slp: Optional[int] = None) -> tuple[str, tuple, Optional[int]]:
+    """The Saboteur becomes the giant red Pac-Man (a walking haunted castle), with icon `icon` if given, his walking
+    picture from SLP `walk_slp` if given and a second free graphic is found: (note, (his graphic, his walking
+    graphic or None), his name string)."""
     gid = giant_graphic(graphics, civs)
     if gid is None:
-        return f"Giant Pac-Man: not changed, none of {', '.join(GIANT_GRAPHICS)} is free for his picture", None, None
+        return (f"Giant Pac-Man: not changed, none of {', '.join(GIANT_GRAPHICS)} is free for his picture",
+                (None, None), None)
+    wid = giant_graphic(graphics, civs, {gid}) if walk_slp is not None else None
     patched, name = 0, None
     for units in civs.units:
         if len(units) <= max(SABOTEUR, PACMAN_UNIT):
@@ -348,7 +365,8 @@ def _giant(data: bytearray, civs, graphics: dict, slp_id: int,
         thick = max(a for _, a in armour)  # his spare attacks hit for nothing, his spare armour is as thick as the rest
         sounds = {f: struct.unpack_from("<h", data, pac.fields[f])[0]  # Pac-Man's, as patched so far
                   for f in ("selection_sound", "dying_sound", "attack_sound", "move_sound")}
-        DU.patch(data, sab, hit_points=GIANT_HP, standing=(gid, -1), walking=(gid, -1), dying=(gid, -1),
+        DU.patch(data, sab, hit_points=GIANT_HP, standing=(gid, -1), walking=(gid if wid is None else wid, -1),
+                 dying=(gid, -1),
                  attack_graphic=gid, dead_unit=-1, blast_width=0.0, blast_level=0, reload=pac.values["reload"],
                  resource_capacity=GIANT_CARRY, hero_status=sab.values["hero_status"] & ~SELF_DESTRUCT,
                  attacks=_spares(sab.values["attacks"], bite, 0), armours=_spares(sab.values["armours"], armour, thick),
@@ -360,11 +378,20 @@ def _giant(data: bytearray, civs, graphics: dict, slp_id: int,
         name = sab.values["name_id"]
         patched += 1
     if not patched:
-        return "Giant Pac-Man: not changed, unit 706 is not the Saboteur here", None, None
+        return "Giant Pac-Man: not changed, unit 706 is not the Saboteur here", (None, None), None
     struct.pack_into("<i", data, graphics[gid].slp_at, slp_id)
+    walking = ""
+    if wid is not None:  # his walking picture: the castle striding on its legs, frames played as walking is
+        g = graphics[wid]
+        struct.pack_into("<i", data, g.slp_at, walk_slp)
+        struct.pack_into("<H", data, g.frames_at, GIANT_WALK_FRAMES)
+        struct.pack_into("<f", data, g.frame_rate_at, GIANT_WALK_RATE)
+        struct.pack_into("<b", data, g.sequence_at, GIANT_WALK_SEQUENCE)
+        walking = f"; walking, graphic {wid} ({g.name}) draws SLP {walk_slp}, {GIANT_WALK_FRAMES} frames a direction"
     return (f"Giant Pac-Man: the Saboteur (unit {SABOTEUR}, cheat \"to smithereens\") for {patched} civilisations: "
             f"Pac-Man's bite and armour, no blast, {GIANT_HP} hit points, a Mangonel's room on the map ({GIANT_ROOM:g} "
-            f"tiles) so ships can unload him; graphic {gid} ({graphics[gid].name}) now draws SLP {slp_id}"), gid, name
+            f"tiles) so ships can unload him; graphic {gid} ({graphics[gid].name}) now draws SLP {slp_id}{walking}"), \
+        (gid, wid), name
 
 
 def _spares(own: list, wanted: list, amount: int) -> list:
@@ -377,21 +404,22 @@ def _spares(own: list, wanted: list, amount: int) -> list:
 _GIANT_SLPS: dict[bytes, bytes] = {}  # palette -> SLP: drawing him takes seconds
 
 
-def giant_slp(quant) -> bytes:
-    """The giant's SLP: the red Pac-Man, one picture for each of the 5 directions stored (the game mirrors the rest),
-    in the palette's red team shades, whoever owns him."""
-    key = np.asarray(quant.palette).tobytes()
+def giant_slp(quant, walking: bool = False) -> bytes:
+    """The giant's SLP: the walking haunted castle (colossus.py), at rest one picture for each of the 5 directions
+    stored (the game mirrors the rest), or `walking` GIANT_WALK_FRAMES pictures a direction, striding on its legs;
+    its player colour in the palette's red team shades, whoever owns him."""
+    key = np.asarray(quant.palette).tobytes() + (b"walk" if walking else b"")
     if key not in _GIANT_SLPS:
+        from .colossus import walking_castle
         from .easter import RED_TEAM
         from .export import render_frames
-        from .pumpkins import giant_pacman
-        unit = giant_pacman()
-        # drawn at full size: the smooth pumpkin would look blocky drawn small and enlarged
-        frames = render_frames(unit, "idle", 1, 8, True, quant)
+        unit = walking_castle()
+        frames = (render_frames(unit, "walk", GIANT_WALK_FRAMES, 8, True, quant) if walking else
+                  render_frames(unit, "idle", 1, 8, True, quant))
         out = []
         for f in frames:
             px = f.pixels.copy()
-            team = px >= slp.PLAYER  # (the pumpkin has no team colour; kept for any that is added)
+            team = px >= slp.PLAYER
             px[team] = RED_TEAM + (px[team] - slp.PLAYER)
             out.append(slp.SlpFrame(px, f.hotspot))
         _GIANT_SLPS[key] = slp.encode(out)

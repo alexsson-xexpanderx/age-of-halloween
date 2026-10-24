@@ -71,18 +71,21 @@ def main(out_dir: Path):
     tiles.append(("Pac-Man, the scary pumpkin (walking, chomping)",
                   row(unit_frames(pac, "walk", 0.3, [-90, -135, 180, 135]) +
                       unit_frames(pac, "attack", 0.25, [-90]))))
-    giant = PK.giant_pacman()
-    giant.scale = 6.0  # at a fifth of his real size, to fit the sheet
-    tiles.append(("The giant Pac-Man (shown at a fifth of his size)",
-                  row(unit_frames(giant, "attack", 0.25, [-90, -135]))))
+    from aoh.colossus import walking_castle
+    giant = walking_castle()
+    giant.scale = 1.0  # at a quarter of his real size, to fit the sheet
+    tiles.append(("The giant Pac-Man: a haunted castle at rest, and walking on its spider legs (a quarter of his size)",
+                  row(unit_frames(giant, "idle", 0.0, [-90]) + unit_frames(giant, "walk", 0.0, [-90, -135]) +
+                      unit_frames(giant, "walk", 0.5, [-45]))))
     mil = UD.militia()
     maa = UD.man_at_arms()
     tiles.append(("Skeleton Militia and Man-at-Arms (standing, walking, swinging)",
                   row(unit_frames(mil, "idle", 0.0, [-90, -135, 180]) + unit_frames(mil, "walk", 0.25, [-135]) +
                       unit_frames(mil, "attack", 0.5, [-90]) + unit_frames(maa, "idle", 0.0, [-90, -135, 180]) +
                       unit_frames(maa, "attack", 0.45, [-135]))))
-    tiles.append(("Haunted Victorian house (West European)", row([static(HT.victorian_house(2, v, seed=v))
-                                                                  for v in range(2)])))
+    from aoh import estates
+    tiles.append(("Haunted Victorian houses (West European)", row([static(estates.house("W", 2, v))
+                                                                   for v in range(3)])))
     wall = Part("walls", children=[
         Part("a", offset=(0, 0, 0), children=[GY.wall_piece("x")]),
         Part("b", offset=(GY.TILE, 0, 0), children=[GY.wall_piece("x")]),

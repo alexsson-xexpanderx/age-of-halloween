@@ -324,16 +324,24 @@ and its icon is the giant Pac-Man's jack-o'-lantern.
 ![easter](../previews/cast_easter.png)
 
 **Pac-Man** takes Furious the Monkey Boy's slot (unit 860) and is a scary
-jack-o'-lantern: a carved, candle-lit pumpkin whose top half opens like a jaw,
-showing two rows of teeth, as he runs and bites. The Wonder trains him (500
+carved jack-o'-lantern: a ribbed pumpkin with angry eyes and a carved nose,
+its mouth cut low under the nose and lined with crooked teeth. When he opens
+it as he runs and bites, a brain shows inside, lit from below. The Wonder trains him (500
 food, 500 gold, 5 minutes, 250 hit points, faster than any unit); he boards
 Transport Ships and gets the infantry upgrades. His icon, sounds and name are
 Age of Minecraft's (they took many rounds of testing in the player's game).
 
-The "to smithereens" cheat's Saboteur is the **giant Pac-Man**: an older,
-rotting pumpkin with vines creeping over it, a meaner grin and more teeth,
-wider and taller than a Castle and a Wonder side by side. He has Pac-Man's
-bite, armour and sounds, 10000 hit points, and no longer blows himself up.
+The "to smithereens" cheat's Saboteur, the **giant Pac-Man**, is a walking
+haunted castle. It is black stone torn out of the ground, with a lump of rock
+and dangling roots under it, a keep under a steep crooked roof, and four
+corner towers under bent witch's hats with red pennants. Its front is a face:
+two lit windows for eyes over a glowing gate whose portcullis is a row of iron
+teeth. At rest it sits on its rock; when it walks it rises on six black
+spider legs with glowing joints and strides, three legs at a time. It is red
+whoever owns it, a little bigger than a Castle at rest and bigger still on its
+legs. He has Pac-Man's bite, armour and sounds, 10000 hit points, and no
+longer blows himself up. His walking picture is a second unused graphic of
+the game (the Trade Cog's), made 6 frames a direction.
 
 The VDML cheat's unit is a bedsheet **ghost** in the owner's colour, and the
 Cobra Car a **hot-rod hearse** with flames painted on its sides.
