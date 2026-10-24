@@ -213,6 +213,7 @@ RED_EYES = (1.0, 0.14, 0.06)  # the player asked for no more green eyes (2026-10
 
 def body(kind: str, seed: int = 0, **kw) -> Body:
     kw.setdefault("eye", EYES.get(kind, EYES["skeleton"]))
+    kw.setdefault("sculpted", kind == "skeleton")  # every skeleton gets the modelled skull, not a ball
     b = Body(kind=kind, **kw)
     if b.skin is None:
         b.skin = SKIN[kind](seed) if kind in SKIN else P.bone(seed)
@@ -230,6 +231,8 @@ def _skull_shapes(b: Body, seed: int) -> list:
     from .undead import _jaw_material, _skull_material
     n = b.neck
     k = b.size
+    if b.kind == "calavera":
+        return _sculpted_skull(n, k, b.eye, seed) + _sugar(n, k, seed)
     if b.sculpted:
         return _sculpted_skull(n, k, b.eye, seed)
     skull_m = _skull_material(b.eye, seed)
@@ -260,6 +263,27 @@ def _sculpted_skull(n: float, k: float, glow, seed: int) -> list:
     for sx in (1, -1):  # the cheekbones
         out.append(S.Ellipsoid(bone, S._orient(tuple(c + (sx * 1.75 * k, 1.6 * k, -0.75 * k))),
                                radii=(0.7 * k, 1.0 * k, 0.5 * k)))
+    return out
+
+
+def _sugar(n: float, k: float, seed: int) -> list:
+    """A sugar skull's decoration on the sculpted skull: petals round both eyes, a red heart on the nose, a row of
+    coloured dots across the brow (Day of the Dead)."""
+    cols = [P.hexrgb("#e0407a"), P.hexrgb("#f08a10"), P.hexrgb("#20b0b0"), P.hexrgb("#f0d020"), P.hexrgb("#8a40d0")]
+    out = []
+    for sx in (1, -1):
+        for j in range(7):
+            a = 2 * math.pi * j / 7
+            p = (sx * 0.95 * k + math.cos(a) * 0.95 * k, 2.55 * k + 0.3, n + 3.75 * k + math.sin(a) * 0.85 * k)
+            out.append(S.Ellipsoid(S.mat(cols[(j + seed) % len(cols)], vivid=1.0), S._orient(p),
+                                   radii=(0.32 * k, 0.2 * k, 0.32 * k)))
+    red = S.mat(P.hexrgb("#d01830"), vivid=1.0)
+    out += [S.ball((-0.2 * k, 2.95 * k + 0.3, n + 3.05 * k), 0.24 * k, red),
+            S.ball((0.2 * k, 2.95 * k + 0.3, n + 3.05 * k), 0.24 * k, red)]
+    for j in range(5):
+        x = (j - 2) * 0.75 * k
+        out.append(S.ball((x, 2.45 * k + 0.25 - abs(x) * 0.12, n + 5.0 * k - abs(x) * 0.15), 0.22 * k,
+                          S.mat(cols[(j + seed + 2) % len(cols)], vivid=1.0)))
     return out
 
 
@@ -336,34 +360,46 @@ def _head_shapes(b: Body, seed: int) -> list:
                        plate),
                 S.hull([(3.3, 0.3, n + 4.8), (3.3, 0.3, n + 6.0), (3.3, -0.4, n + 5.4), (6.0, 0.3, n + 7.6)],
                        plate)]
-    # flesh heads: a slightly long skull shape with sunken glowing eyes and a gaping mouth
-    eyes = [(-1.25, 0.6, 0.62, 0.48), (1.25, 0.6, 0.62, 0.48)]
-    m = eyes_material(b.skin, eyes, eye, 0.55)
-    shapes = [S.Ellipsoid(m, S._orient((0, 0.3, n + 3.3 * k)), radii=(3.0 * k, 3.2 * k, 3.5 * k))]
-    if kind in ("zombie", "ghoul", "draugr", "banshee", "imp"):  # a gaping mouth
-        shapes.append(S.Ellipsoid(S.mat(P.hexrgb("#1a0a0c")), S._orient((0, 2.6 * k, n + 1.6 * k)),
-                                  radii=(1.1 * k, 0.6 * k, 0.9 * k)))
-    if kind == "zombie":
-        shapes.append(S.ball((-1.6, 0.0, n + 6.0), (1.0, 1.4, 0.4), P.mottled(P.hexrgb("#2a2018"))))  # matted hair
+    # flesh heads, modelled (the player found ball heads like Lego): a cranium, a narrower face and jaw, a brow
+    # ridge over sunken sockets with glowing pupils, cheekbones, a nose, a mouth, a chin and ears
+    shapes = _face_shapes(b, seed)
+    c = np.array([0.0, 0.0, n + 3.4 * k])
+    dark = S.mat(P.hexrgb("#16080c"))
+    if kind in ("zombie", "ghoul", "draugr", "imp", "ghost"):  # a gaping mouth, a few teeth
+        gape = 0.55 if kind in ("zombie", "ghoul", "ghost") else 0.35
+        shapes.append(S.Ellipsoid(S.mat(P.hexrgb("#1a0a0c")), S._orient(tuple(c + (0, 2.65 * k, -1.75 * k))),
+                                  radii=(0.95 * k, 0.45 * k, gape * k)))
+        if kind != "ghost":
+            for x in (-0.55, -0.15, 0.3, 0.6):
+                shapes.append(S.block((x * k - 0.16, 2.95 * k, -1.45 * k + c[2] - 0.5), (x * k + 0.16, 3.15 * k,
+                                                                                         -1.45 * k + c[2]),
+                                      S.mat(P.hexrgb("#c8b890"))))
+    if kind == "zombie":  # matted hair in patches, one ear torn
+        hair = P.mottled(P.hexrgb("#2a2018"))
+        shapes += [S.ball(tuple(c + (-1.4, -0.6, 2.6)), (1.3, 1.6, 0.6), hair),
+                   S.ball(tuple(c + (1.0, -1.6, 2.2)), (1.0, 1.2, 0.5), hair)]
     if kind == "imp":
         horn = S.mat(P.hexrgb("#1a1414"), shine=0.4)
-        shapes += [S.rod((-1.6, 0.4, n + 5.6), (-2.8, -0.8, n + 9.0), 0.7, horn, 0.1),
-                   S.rod((1.6, 0.4, n + 5.6), (2.8, -0.8, n + 9.0), 0.7, horn, 0.1)]
+        shapes += [S.rod((-1.5, 0.2, n + 5.6), (-2.8, -0.9, n + 9.0), 0.7, horn, 0.1),
+                   S.rod((1.5, 0.2, n + 5.6), (2.8, -0.9, n + 9.0), 0.7, horn, 0.1)]
+        for sx in (1, -1):  # long pointed ears
+            shapes.append(S.hull([c + (sx * 2.6, 0.2, -0.6), c + (sx * 2.6, 0.6, 0.6), c + (sx * 2.5, -0.5, 0.0),
+                                  c + (sx * 4.6, -0.6, 1.4)], b.skin))
+    if kind == "draugr":  # a braided beard, frosted
+        beard = P.mottled(P.hexrgb("#8a8478"), P.hexrgb("#3a3630"), 1.0, 0.5, seed)
+        shapes += [S.Ellipsoid(beard, S._orient(tuple(c + (0, 2.0 * k, -2.6 * k))), radii=(1.6, 1.2, 1.4)),
+                   S.rod(tuple(c + (0, 2.2 * k, -3.4 * k)), tuple(c + (0, 2.6 * k, -6.4 * k)), 0.9, beard, 0.35)]
     if kind == "vampire":  # slicked-back black hair with a widow's peak, pointed ears, sharp brows, fangs
         hair = S.mat(P.hexrgb("#141016"), shine=0.6, gloss=30)
-        dark = S.mat(P.hexrgb("#16080c"))
-        shapes += [S.ball((0, -0.5, n + 4.6), (3.15, 3.2, 2.6), hair).clip((0, 1, -0.6), 0.9),
-                   S.hull([(-1.5, 2.55, n + 6.1), (1.5, 2.55, n + 6.1), (0, 3.2, n + 4.9), (0, 2.2, n + 6.6),
-                           (0, 1.6, n + 6.0)], hair),  # the widow's peak
-                   S.Ellipsoid(b.skin, S._orient((0, 2.3, n + 0.7)), radii=(1.3, 1.1, 1.0)),  # a pointed chin
-                   S.Ellipsoid(b.skin, S._orient((0, 3.15, n + 2.8)), radii=(0.35, 0.45, 0.85)),  # a thin nose
-                   S.Ellipsoid(dark, S._orient((0, 2.95, n + 1.55)), radii=(1.05, 0.3, 0.2)),  # a thin mouth
-                   S.hull([(-0.75, 2.95, n + 1.55), (-0.4, 2.95, n + 1.55), (-0.58, 3.05, n + 0.75)], S.mat(P.BONE)),
-                   S.hull([(0.75, 2.95, n + 1.55), (0.4, 2.95, n + 1.55), (0.58, 3.05, n + 0.75)], S.mat(P.BONE))]
+        shapes += [S.ball(tuple(c + (0, -0.7, 1.4)), (3.0, 3.15, 2.5), hair).clip((0, 1, -0.6), 0.8),
+                   S.hull([c + (-1.4, 2.0, 2.6), c + (1.4, 2.0, 2.6), c + (0, 2.55, 1.5), c + (0, 1.6, 3.0),
+                           c + (0, 1.2, 2.4)], hair),  # the widow's peak
+                   S.hull([c + (-0.7, 2.95, -1.65), c + (-0.4, 2.95, -1.65), c + (-0.56, 3.0, -2.35)], S.mat(P.BONE)),
+                   S.hull([c + (0.7, 2.95, -1.65), c + (0.4, 2.95, -1.65), c + (0.56, 3.0, -2.35)], S.mat(P.BONE))]
         for sx in (1, -1):
-            shapes += [S.hull([(sx * 2.7, 0.2, n + 2.7), (sx * 2.7, 0.7, n + 4.1), (sx * 2.6, -0.5, n + 3.6),
-                               (sx * 4.1, -0.7, n + 5.4)], b.skin),  # pointed ears
-                       S.rod((sx * 0.35, 3.25, n + 4.55), (sx * 2.0, 2.75, n + 5.25), 0.24, dark, 0.14)]  # brows
+            shapes += [S.hull([c + (sx * 2.6, 0.2, -0.8), c + (sx * 2.6, 0.7, 0.6), c + (sx * 2.5, -0.5, 0.0),
+                               (sx * 4.0, -0.7, c[2] + 1.9)], b.skin),  # pointed ears
+                       S.rod(tuple(c + (sx * 0.3, 2.85, 0.95)), tuple(c + (sx * 1.9, 2.35, 1.55)), 0.22, dark, 0.13)]
     if kind == "jiangshi":  # the Qing hat and the yellow paper talisman on the forehead
         hat = S.mat(P.hexrgb("#1a1418"))
         shapes += [S.rod((0, 0.3, n + 5.6), (0, 0.3, n + 6.6), 3.6, hat, 3.1),
@@ -371,14 +407,39 @@ def _head_shapes(b: Body, seed: int) -> list:
                    S.ball((0, 0.3, n + 8.0), 0.6, P.team(0.6)),
                    S.block((-1.0, 3.3, n + 0.6), (1.0, 3.6, n + 5.2),
                            S.Material(color=_talisman, vivid=0.8))]
-    if kind == "mummy":
-        shapes.append(S.ball((0, 0.3, n + 3.3), (3.15, 3.35, 3.65), b.skin).clip((0, -1, 0), -2.2))
     if kind == "banshee":  # long white hair streaming down the back
         hair = ghostly(P.hexrgb("#f2f4f6"), seed + 3)
-        shapes += [S.ball((0, -0.6, n + 4.0), (3.4, 3.4, 3.2), hair).clip((0, 1, 0), 0.8),
+        shapes += [S.ball((0, -0.8, n + 4.0), (3.2, 3.3, 3.1), hair).clip((0, 1, 0), 0.6),
                    S.rod((0, -2.2, n + 4.0), (0, -3.4, n - 9.0), 2.8, hair, 0.8)]
     return shapes
 
+
+
+def _face_shapes(b: Body, seed: int) -> list:
+    """A modelled head of flesh (or bandage, or ghost): the cranium, a narrower face and jaw under it, a brow ridge,
+    sunken dark sockets with a glowing pupil in each, cheekbones, a nose, a mouth, a chin and ears."""
+    n, k = b.neck, b.size
+    skin = b.skin
+    dark = S.mat(P.hexrgb("#120a0c"))
+    glow = S.mat(tuple(b.eye), glow=1.0)
+    c = np.array([0.0, 0.0, n + 3.4 * k])
+    out = [S.Ellipsoid(skin, S._orient(tuple(c + (0, -0.4 * k, 0.3 * k))), radii=(2.85 * k, 3.0 * k, 3.0 * k)),
+           S.Ellipsoid(skin, S._orient(tuple(c + (0, 0.9 * k, -1.0 * k))), radii=(2.25 * k, 2.1 * k, 2.3 * k)),
+           S.Ellipsoid(skin, S._orient(tuple(c + (0, 2.15 * k, 0.75 * k))), radii=(2.3 * k, 0.75 * k, 0.55 * k)),
+           S.Ellipsoid(skin, S._orient(tuple(c + (0, 1.9 * k, -2.4 * k))), radii=(1.2 * k, 1.0 * k, 0.9 * k)),
+           S.hull([c + (0, 2.3 * k, 0.55 * k), c + (-0.45 * k, 2.4 * k, -0.9 * k), c + (0.45 * k, 2.4 * k, -0.9 * k),
+                   c + (0, 3.35 * k, -0.85 * k), c + (0, 2.0 * k, -0.3 * k)], skin),
+           S.Ellipsoid(dark, S._orient(tuple(c + (0, 2.75 * k, -1.55 * k))), radii=(0.95 * k, 0.3 * k, 0.2 * k))]
+    for sx in (1, -1):
+        out += [S.Ellipsoid(skin, S._orient(tuple(c + (sx * 1.55 * k, 1.85 * k, -0.45 * k))),
+                            radii=(0.75 * k, 0.9 * k, 0.55 * k)),
+                S.Ellipsoid(dark, S._orient(tuple(c + (sx * 0.95 * k, 2.2 * k, 0.15 * k))),
+                            radii=(0.62 * k, 0.4 * k, 0.42 * k)),
+                S.ball(tuple(c + (sx * 0.95 * k, 2.5 * k, 0.15 * k)), 0.22 * k, glow)]
+        if b.kind not in ("vampire", "imp"):
+            out.append(S.Ellipsoid(skin, S._orient(tuple(c + (sx * 2.75 * k, -0.2 * k, -0.1 * k))),
+                                   radii=(0.35 * k, 0.8 * k, 1.0 * k)))
+    return out
 
 def _talisman(look):
     p = look.p
