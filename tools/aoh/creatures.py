@@ -14,6 +14,8 @@ A body kind sets the skin, head, limbs and proportions:
     calavera   a painted sugar skull (Day of the Dead)        ghost     pale and glowing, floating, no legs
     jiangshi   a hopping corpse in a robe and a hat           knight    a death knight: black plate, red visor
     draugr     a Norse corpse, icy blue eyes                  banshee   a floating wailing woman, white hair
+    phantom    a pale glowing spectre in a hooded shroud whose hem trails into mist, a dark face with two red
+               glowing eyes, floating (the villagers)
 
 Model units: about 30 high, facing +y.
 """
@@ -104,6 +106,23 @@ def ghostly(base=P.hexrgb("#bfe8de"), seed=0) -> S.Material:
     return S.Material(color=color, glow=glow, vivid=0.6)
 
 
+def spectral(length: float, seed=0, top=P.hexrgb("#dcf0fc"), bottom=P.hexrgb("#3a6280")) -> S.Material:
+    """A phantom's shroud: shining pale at the top, fading to a dim blue along the shape (its local z, 0 to
+    `length`: rods run from their first point to their second), wisps of light through it."""
+    top, bottom = np.asarray(top, float), np.asarray(bottom, float)
+
+    def fade(look):
+        return np.clip(look.p[:, 2] / length, 0, 1) ** 0.9
+
+    def color(look):
+        f = fade(look)
+        return P.mix(P.mix(top, bottom, f), bottom * 0.7, 0.35 * P.fbm(look.p, 2.2, seed))
+
+    def glow(look):
+        return 0.78 - 0.45 * fade(look) + 0.15 * (P.noise(look.p, 1.6, seed + 3) - 0.5)
+    return S.Material(color=color, glow=glow, vivid=0.85)
+
+
 def chainmail(base=P.hexrgb("#7a7a84"), seed=0) -> S.Material:
     base = np.asarray(base, float)
 
@@ -174,12 +193,13 @@ SKIN = {
     "jiangshi": lambda s: flesh(P.hexrgb("#a8b8a4"), P.hexrgb("#5a6858"), s),
     "ghost": lambda s: ghostly(seed=s),
     "banshee": lambda s: ghostly(P.hexrgb("#d6e4ee"), seed=s),
+    "phantom": lambda s: replace(ghostly(P.hexrgb("#d4ecf8"), seed=s), vivid=0.85),
 }
 EYES = {"skeleton": (0.61, 1.0, 0.42), "zombie": (1.0, 0.85, 0.3), "ghoul": (0.75, 0.95, 1.0),
         "imp": (1.0, 0.75, 0.15), "werewolf": (1.0, 0.7, 0.1), "mummy": (0.55, 1.0, 0.45), "vampire": (1.0, 0.15, 0.1),
         "batman": (1.0, 0.3, 0.15), "calavera": (1.0, 0.6, 0.15), "ghost": (0.4, 1.0, 0.95),
         "jiangshi": (0.9, 0.95, 0.85), "knight": (1.0, 0.12, 0.05), "draugr": (0.45, 0.8, 1.0),
-        "banshee": (0.85, 0.95, 1.0)}
+        "banshee": (0.85, 0.95, 1.0), "phantom": (1.0, 0.14, 0.06)}
 
 
 def body(kind: str, seed: int = 0, **kw) -> Body:
@@ -188,8 +208,10 @@ def body(kind: str, seed: int = 0, **kw) -> Body:
         b.skin = SKIN[kind](seed) if kind in SKIN else P.bone(seed)
     if kind in ("zombie", "ghoul") and "hunch" not in kw:
         b.hunch = 12 if kind == "zombie" else 18
-    if kind in ("ghost", "banshee"):
+    if kind in ("ghost", "banshee", "phantom"):
         b.floating = True
+    if kind == "phantom" and "hunch" not in kw:
+        b.hunch = 6
     return b
 
 
@@ -253,6 +275,16 @@ def _head_shapes(b: Body, seed: int) -> list:
                        b.skin),
                 S.hull([(-0.9, 2.6, n + 1.2), (-0.5, 2.6, n + 1.2), (-0.7, 2.7, n + 0.0)], S.mat(P.BONE)),
                 S.hull([(0.9, 2.6, n + 1.2), (0.5, 2.6, n + 1.2), (0.7, 2.7, n + 0.0)], S.mat(P.BONE))]
+    if kind == "phantom":  # no face under the hood: darkness and two glowing eyes, the hood pale and glowing
+        void = S.mat(P.hexrgb("#0a0810"))
+        face = eyes_material(void, [(-1.2, 0.3, 0.8, 0.5), (1.2, 0.3, 0.8, 0.5)], eye, 0.8, P.hexrgb("#0a0810"))
+        hood = replace(ghostly(P.hexrgb("#d4ecf8"), seed + 4), vivid=0.85)
+        top = n + 3.3 * k
+        return [S.Ellipsoid(face, S._orient((0, 0.2, n + 3.0 * k)), radii=(2.6 * k, 2.8 * k, 3.2 * k)),
+                S.ball((0, -0.5, top - 0.6), (3.8 * k, 4.2 * k, 4.4 * k), hood).clip((0, 1, 0), 2.4 * k),
+                # the hood rises to a point at the back of the head and falls down over the shoulders
+                S.hull([(-2.6, -2.0, top + 1.4), (2.6, -2.0, top + 1.4), (0, -1.0, top + 5.4), (0, -4.2, top + 1.6),
+                        (-3.0, -3.4, top - 2.4), (3.0, -3.4, top - 2.4)], hood)]
     if kind == "knight":  # a black great helm with a glowing visor slit and spikes
         plate = P.metal(P.hexrgb("#2a262e"), rust=0.3, seed=seed, shine=0.7)
 
@@ -320,7 +352,7 @@ def _limb_shapes(b: Body, a, c, r0, r1) -> list:
 @dataclass
 class Gear:
     helmet: Optional[str] = None  # kettle, nasal, great, horned, hood, cowl, crown, turban, fez, feathers, pelt, oni
-    cloth: Optional[str] = None  # loin, tunic, tabard, robe, rags, dress, wraps
+    cloth: Optional[str] = None  # loin, tunic, tabard, robe, rags, dress, wraps, shroud
     cape: bool = False
     armour: Optional[str] = None  # plate, mail, lamellar
     shield: Optional[str] = None  # round, kite, oval
@@ -408,6 +440,27 @@ def _cloth_shapes(b: Body, g: Gear, seed: int) -> list:
     if g.cloth == "rags":  # a torn shirt and a ragged skirt, a rag tied round the arm in the owner's colour
         return [_chest(b, drab, 0.25), _torn_skirt(h + 1.0, h - 5.0, 3.2, 3.7, cloth(P.hexrgb("#3e382e"), seed=seed)),
                 _belt(b, h + 1.0, True, seed)]
+    if g.cloth == "shroud":  # a long hooded robe, pale and glowing, its hem trailing into wisps of mist
+        robe_top, robe_foot = sh + 0.6, 1.6
+        rng = np.random.default_rng(seed + 40)
+        out = [S.rod((0, 0, robe_top), (0, -0.4, robe_foot), 2.9, spectral(robe_top - robe_foot, seed + 2), 5.0),
+               S.rod((0, -0.3, sh + 2.0), (0, -0.3, sh - 2.2), 2.2, spectral(14.0, seed + 5), 5.0),  # the cape
+               _belt(b, h + 1.6, True, seed),
+               S.rod((-3.0, 2.6, sh + 0.2), (2.6, 3.2, h + 1.6), 0.55, team_cloth(0.6, seed))]  # a sash
+        for j in range(11):  # the tatters: tongues of the hem drifting back and down into mist
+            a = 2 * math.pi * j / 11 + rng.uniform(-0.2, 0.2)
+            top = np.array([math.cos(a) * 4.6, math.sin(a) * 4.6 - 0.4, 3.0])
+            drift = (rng.uniform(-0.8, 0.8), -2.2 - rng.uniform(0, 2.0), -1.8 - rng.uniform(0, 1.4))
+            tip = top * (1.15, 1.0, 0) + drift
+            out.append(S.rod(top, tip, 1.3, spectral(6.0, seed + 6 + j, P.hexrgb("#8ab0c8")), 0.05))
+        for j in range(4):  # mist round the foot, glowing faintly, casting nothing
+            m = S.Ellipsoid(ghostly(P.hexrgb("#7ea2b8"), seed + 9 + j),
+                            S._orient((rng.uniform(-2.5, 2.5), rng.uniform(-3.5, 1.5), -1.2)),
+                            radii=(rng.uniform(2.4, 3.6), rng.uniform(1.8, 2.8), 0.7))
+            m.casts = False
+            m.ink = False
+            out.append(m)
+        return out
     if g.cloth == "dress":
         gown = ghostly(P.hexrgb("#c8d8e0"), seed + 2) if b.kind in ("ghost", "banshee") else drab
         return [S.rod((0, 0, sh + 0.2), (0, 0, -1.0), 3.0, gown, 6.4), _belt(b, h + 2.0, True, seed)]
@@ -796,10 +849,11 @@ def person(key: str, name: str, replaces: str, b: Body, g: Gear = Gear(), attack
         if b.kind == "knight" or g.armour == "plate":
             hand_m = P.metal(P.hexrgb("#2a262e") if b.kind == "knight" else P.hexrgb("#7a7a84"), seed=seed)
             shapes += S.limb((x, 0, sh - 0.8), elbow, thick * 1.25, hand_m, thick * 1.15)
-        if g.cloth in ("robe", "wraps", "dress"):  # wide sleeves, the robe's colour
+        if g.cloth in ("robe", "wraps", "dress", "shroud"):  # wide sleeves, the robe's colour
             sleeve = {"robe": cloth(P.hexrgb("#24202a"), seed=seed), "wraps": cloth(P.hexrgb("#38586a"), seed=seed),
                       "dress": ghostly(P.hexrgb("#c8d8e0"), seed + 2) if b.kind in ("ghost", "banshee")
-                      else cloth(DRAB[seed % len(DRAB)], seed=seed)}[g.cloth]
+                      else cloth(DRAB[seed % len(DRAB)], seed=seed),
+                      "shroud": spectral(10.0, seed + 2)}[g.cloth]
             shapes.append(S.rod((x, 0, sh - 0.4), (x + sign * 0.5, 0.6, sh - 7.2), thick * 1.5, sleeve,
                                 thick * 2.4))
         shapes.append(S.ball(tuple(hand), (0.8, 0.95, 1.0), hand_m))

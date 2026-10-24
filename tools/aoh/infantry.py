@@ -8,7 +8,7 @@ targets in slpmap.py).
     Archers             skeleton archers; crossbows are ghouls; Skirmishers are imps with javelins
     Hand Cannoneer      a ghost pirate with a blunderbuss
     Petard              a zombie lifting a jack-o'-lantern bomb with a lit fuse
-    Villagers           zombie peasants with their tools and loads
+    Villagers           phantoms: pale glowing spectres in hooded shrouds, with their tools and loads
     Monk                a necromancer: a skull under a black cowl, a staff with a green flame
     King                a vampire lord in a crown and a cape
     Uniques             Longbowman: a spectral archer. Woad Raider: a banshee. Chu Ko Nu: a jiangshi.
@@ -118,32 +118,40 @@ def war_elephant() -> Unit:
 
 
 FOOT = {
-    # villagers: zombie peasants
-    "villager": _unit("villager", "Zombie Villager", "Villager", "zombie", Gear(cloth="rags"), rig="villager",
-                      group="civilian", seed=1, arms_out=65),
-    "villager_lumberjack": _unit("villager_lumberjack", "Zombie Lumberjack", "Lumberjack", "zombie",
-                                 Gear(cloth="rags", right="woodaxe", carry="wood"), group="civilian", seed=2),
-    "villager_gold_miner": _unit("villager_gold_miner", "Zombie Gold Miner", "Gold Miner", "zombie",
-                                 Gear(cloth="rags", right="pickaxe", carry="gold"), group="civilian", seed=3),
-    "villager_stone_miner": _unit("villager_stone_miner", "Zombie Stone Miner", "Stone Miner", "zombie",
-                                  Gear(cloth="rags", right="pickaxe", carry="stone"), group="civilian", seed=4),
-    "villager_farmer": _unit("villager_farmer", "Zombie Farmer", "Farmer", "zombie",
-                             Gear(cloth="rags", right="hoe", carry="food"), group="civilian", seed=5),
-    "villager_builder": _unit("villager_builder", "Zombie Builder", "Builder", "zombie",
-                              Gear(cloth="rags", right="hammer"), group="civilian", seed=6),
-    "villager_repairer": _unit("villager_repairer", "Zombie Repairer", "Repairer", "zombie",
-                               Gear(cloth="rags", right="hammer"), group="civilian", seed=7),
-    "villager_hunter": _unit("villager_hunter", "Zombie Hunter", "Hunter", "zombie",
-                             Gear(cloth="rags", left="bow", back="quiver", carry="meat"), attack="bow",
-                             group="civilian", seed=8),
-    "villager_fisherman": _unit("villager_fisherman", "Zombie Fisherman", "Fisherman", "zombie",
-                                Gear(cloth="rags", right="rod", carry="fish"), attack="fish", group="civilian", seed=9),
-    "villager_forager": _unit("villager_forager", "Zombie Forager", "Forager", "zombie",
-                              Gear(cloth="rags", left="basket", carry="berries"), attack="gather", group="civilian",
-                              seed=10),
-    "villager_shepherd": _unit("villager_shepherd", "Zombie Shepherd", "Shepherd", "zombie",
-                               Gear(cloth="rags", right="lantern", carry="meat"), attack="shear", group="civilian",
-                               seed=11),
+    # villagers: phantoms, pale glowing spectres in hooded shrouds with red eyes (the zombies looked robotic)
+    "villager": _unit("villager", "Phantom Villager", "Villager", "phantom",
+                   Gear(cloth="shroud"),
+                   rig="villager", group="civilian", seed=1),
+    "villager_lumberjack": _unit("villager_lumberjack", "Phantom Lumberjack", "Lumberjack", "phantom",
+                   Gear(cloth="shroud", right="woodaxe", carry="wood"),
+                   group="civilian", seed=2),
+    "villager_gold_miner": _unit("villager_gold_miner", "Phantom Gold Miner", "Gold Miner", "phantom",
+                   Gear(cloth="shroud", right="pickaxe", carry="gold"),
+                   group="civilian", seed=3),
+    "villager_stone_miner": _unit("villager_stone_miner", "Phantom Stone Miner", "Stone Miner", "phantom",
+                   Gear(cloth="shroud", right="pickaxe", carry="stone"),
+                   group="civilian", seed=4),
+    "villager_farmer": _unit("villager_farmer", "Phantom Farmer", "Farmer", "phantom",
+                   Gear(cloth="shroud", right="hoe", carry="food"),
+                   group="civilian", seed=5),
+    "villager_builder": _unit("villager_builder", "Phantom Builder", "Builder", "phantom",
+                   Gear(cloth="shroud", right="hammer"),
+                   group="civilian", seed=6),
+    "villager_repairer": _unit("villager_repairer", "Phantom Repairer", "Repairer", "phantom",
+                   Gear(cloth="shroud", right="hammer"),
+                   group="civilian", seed=7),
+    "villager_hunter": _unit("villager_hunter", "Phantom Hunter", "Hunter", "phantom",
+                   Gear(cloth="shroud", left="bow", back="quiver", carry="meat"),
+                   attack="bow", group="civilian", seed=8),
+    "villager_fisherman": _unit("villager_fisherman", "Phantom Fisherman", "Fisherman", "phantom",
+                   Gear(cloth="shroud", right="rod", carry="fish"),
+                   attack="fish", group="civilian", seed=9),
+    "villager_forager": _unit("villager_forager", "Phantom Forager", "Forager", "phantom",
+                   Gear(cloth="shroud", left="basket", carry="berries"),
+                   attack="gather", group="civilian", seed=10),
+    "villager_shepherd": _unit("villager_shepherd", "Phantom Shepherd", "Shepherd", "phantom",
+                   Gear(cloth="shroud", right="lantern", carry="meat"),
+                   attack="shear", group="civilian", seed=11),
     "monk": _unit("monk", "Necromancer", "Monk", "skeleton", Gear(helmet="cowl", cloth="robe", right="staff",
                                                                     left="orb"), attack="cast", group="civilian",
                   seed=12),

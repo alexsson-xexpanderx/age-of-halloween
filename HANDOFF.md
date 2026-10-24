@@ -39,7 +39,8 @@ team cloth, metal). export.py, props.py and concept_sheet.py draw with it. The m
 
 ## The cast
 
-- Villagers: zombie peasants (each job with its tool). Monk: a hooded necromancer. King: a vampire lord.
+- Villagers: phantoms in hooded shrouds with red eyes (each job with its tool); first zombie peasants, which
+  the player found robotic (2026-10-24). Monk: a hooded necromancer. King: a vampire lord.
 - Militia line: skeleton soldiers, better armour each age (done: militia, man-at-arms). Spear line: skeleton
   spearmen. Archers: skeleton archers; crossbows: ghouls. Skirmishers: imps with javelins. Hand cannoneer: a ghost
   pirate. Petard: a zombie with a jack-o'-lantern bomb. Eagle warriors: Camazotz bat-men.

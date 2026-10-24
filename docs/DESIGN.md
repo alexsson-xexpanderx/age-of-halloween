@@ -1,8 +1,8 @@
 # Age of Halloween — design
 
 A graphics mod for **Age of Empires II: Gold Edition** (The Age of Kings +
-The Conquerors) that turns the whole game into a Halloween night: zombie
-villagers, skeleton armies, death knights on nightmares, ghost ships, haunted
+The Conquerors) that turns the whole game into a Halloween night:
+phantom villagers, skeleton armies, death knights on nightmares, ghost ships, haunted
 houses in five haunted cultures, pumpkin patches, a churchyard menu, and Pac-Man
 as a scary jack-o'-lantern. Gameplay stays the same; only the pictures change
 (and the names and texts of the mod's own extra units).
@@ -34,7 +34,7 @@ group has a preview sheet, `previews/cast_<group>.png`.
 
 | Group | Halloween take |
 |---|---|
-| Villagers | zombie villagers in rags, each job with its tool and its load (logs, ore, pumpkins, meat, fish) |
+| Villagers | phantoms: pale glowing spectres in hooded shrouds whose hems trail into mist, two red eyes in the dark under the hood, a sash in the owner's colour, each job with its tool and its load (logs, ore, pumpkins, meat, fish) |
 | Monk / King | a hooded necromancer with a skull staff / a vampire lord in a high-collared cloak |
 | Swordsmen, spearmen | skeleton soldiers whose armour gets better each age |
 | Archers | skeleton archers; crossbowmen are ghouls; skirmishers are imps with javelins |

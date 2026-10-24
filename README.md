@@ -1,7 +1,7 @@
 # Age of Halloween
 
 A mod for **Age of Empires II: Gold Edition** that turns the whole game into a
-Halloween night. Zombie villagers shuffle to work, skeleton soldiers march with
+Halloween night. Phantom villagers glide to work, skeleton soldiers march with
 ghoul crossbowmen and imp skirmishers, death knights ride nightmares and the
 Paladin is the Headless Horseman. Coffin rams, bone catapults and a gallows
 trebuchet lay siege; ghost ships sail under torn sails. Every building is
@@ -65,7 +65,7 @@ tools/aoh/sculpt.py      the ray tracer: smooth shapes (spheres, rods, turned sh
 tools/aoh/paint.py       materials: pumpkin, wood, bricks, shingles, bone, bark, team cloth, metal, noise
 tools/aoh/geometry.py    model parts and poses (shared with the old box models)
 tools/aoh/animation.py   rigs and attack styles: stand / walk / attack / die / carry poses
-tools/aoh/creatures.py   bodies (skeleton, zombie, ghoul, imp, werewolf, mummy, vampire, ghost...) and their gear
+tools/aoh/creatures.py   bodies (skeleton, zombie, phantom, ghoul, imp, werewolf, mummy, vampire, ghost...) and their gear
 tools/aoh/infantry.py    villagers, monk, king, foot soldiers, archers and the foot unique units
 tools/aoh/cavalry.py     nightmares and bone horses and their riders, the Headless Horseman
 tools/aoh/engines.py     coffin rams, bone catapults and ballistae, the bombard, the trebuchet, the hearse, the ghost train

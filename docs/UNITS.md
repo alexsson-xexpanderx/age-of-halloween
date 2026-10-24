@@ -9,17 +9,17 @@ The Conquerors) and its Halloween replacement. Previews: `previews/cast_<group>.
 
 | AoE2 unit | Halloween figure | Civilisation |
 |---|---|---|
-| Villager | Zombie Villager |  |
-| Lumberjack | Zombie Lumberjack |  |
-| Gold Miner | Zombie Gold Miner |  |
-| Stone Miner | Zombie Stone Miner |  |
-| Farmer | Zombie Farmer |  |
-| Builder | Zombie Builder |  |
-| Repairer | Zombie Repairer |  |
-| Hunter | Zombie Hunter |  |
-| Fisherman | Zombie Fisherman |  |
-| Forager | Zombie Forager |  |
-| Shepherd | Zombie Shepherd |  |
+| Villager | Phantom Villager |  |
+| Lumberjack | Phantom Lumberjack |  |
+| Gold Miner | Phantom Gold Miner |  |
+| Stone Miner | Phantom Stone Miner |  |
+| Farmer | Phantom Farmer |  |
+| Builder | Phantom Builder |  |
+| Repairer | Phantom Repairer |  |
+| Hunter | Phantom Hunter |  |
+| Fisherman | Phantom Fisherman |  |
+| Forager | Phantom Forager |  |
+| Shepherd | Phantom Shepherd |  |
 | Monk | Necromancer |  |
 | King | Vampire Lord |  |
 

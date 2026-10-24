@@ -100,9 +100,9 @@ each one backed up first, and **`restore_original.bat`** puts them back.
 ## What to expect in this test
 
 * All unit sprites are replaced: standing, walking, attacking, dying and
-  decaying, plus villager work and carry animations: zombie villagers,
+  decaying, plus villager work and carry animations: phantom villagers,
   skeleton armies, death knights on nightmares, ghost ships and more. Male and
-  female villagers share the zombie villager models.
+  female villagers share the phantom models.
 * All buildings are replaced, in five haunted cultures (Victorian haunted
   houses, Transylvanian gothic, mummy tombs, ghost lanterns, Day of the Dead)
   and every age, with walls, gates, towers, castles, docks and the eighteen
