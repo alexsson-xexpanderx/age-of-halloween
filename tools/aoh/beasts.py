@@ -213,7 +213,7 @@ def nightmare_horse(key="horse") -> Unit:
 
 ANIMALS = {
     "jaguar": lambda: quadruped("jaguar", "Shadow Panther", "Jaguar",
-                                C.fur(P.hexrgb("#2a2830"), P.hexrgb("#0e0c12"), 4), 1.1, P.hexrgb("#9cff6a"),
+                                C.fur(P.hexrgb("#2a2830"), P.hexrgb("#0e0c12"), 4), 1.1, RED_EYE,
                                 attack="bite", snout=0.6),
     "horse": nightmare_horse,
     "hawk": lambda: flyer("hawk", "Giant Bat", "Hawk", "bat"),

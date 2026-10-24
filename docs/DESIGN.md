@@ -36,6 +36,16 @@ chin and ears. Skeletons have a skull modelled bone by bone (brow, cheekbones,
 nose hole, teeth). The Day of the Dead calaveras' skulls have flower petals
 round the eyes, a red heart on the nose and coloured dots on the brow.
 
+Horses are modelled like horses, not balloons. Each has a barrel, a deep
+chest, a broad croup, withers, and shoulder and thigh muscles. The neck is
+arched, with a mane falling to one side. The head has a broad forehead and a
+round jowl tapering to a muzzle with nostrils, eyes on the sides, pointed ears
+and a forelock. The legs have knees or hocks, slim cannons, fetlocks, angled
+pasterns and hooves, and the tail flows in locks of hair. Ridden horses carry
+a saddle with stirrups on a blanket in the owner's colour, a bridle and reins.
+The skeleton horse has a horse's skull and bone legs, and the camel its hump
+and drooping lips.
+
 ![foot](../previews/cast_foot.png)
 
 | Group | Halloween take |
