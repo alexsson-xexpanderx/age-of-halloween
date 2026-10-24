@@ -68,6 +68,10 @@ team cloth, metal). export.py, props.py and concept_sheet.py draw with it. The m
   farms, the texts (Ghost Train, Bone Dragon, Cauldron); the menu (a churchyard at night), the loading screen (a
   full moon), the other screens (the crypt), the panels (planks, a bone-pale panel, sculpt icons), the app icon (the
   giant's jack-o'-lantern) and the Bone Dragon's unit icon; docs.
+- 2026-10-24 (the player's review of the overview page, overview/index.html, not in git): villagers became
+  phantoms with red eyes; the Necromancer a sculpted skull; the Vampire Lord a real vampire face; no silver on any
+  unit (rusted iron, bronze, flesh tones, spectral blue) and no green eyes (red) - the player wants neither from
+  now on; every building rebuilt as a detailed haunted house (spooky.py), no pyramids, webs from time to time.
 
 ## Next
 
