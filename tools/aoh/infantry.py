@@ -9,8 +9,9 @@ targets in slpmap.py).
     Hand Cannoneer      a ghost pirate with a blunderbuss
     Petard              a zombie lifting a jack-o'-lantern bomb with a lit fuse
     Villagers           phantoms: pale glowing spectres in hooded shrouds, with their tools and loads
-    Monk                a necromancer: a skull under a black cowl, a staff with a green flame
-    King                a vampire lord in a crown and a cape
+    Monk                a necromancer: a sculpted skull with red eyes under a black cowl, a staff with a green
+                        flame
+    King                a vampire lord: slicked-back hair, pointed ears, fangs, a crown, a high collar, a cape
     Uniques             Longbowman: a spectral archer. Woad Raider: a banshee. Chu Ko Nu: a jiangshi.
                         Throwing Axeman: a werewolf. Huskarl: a draugr. Samurai: a ghost samurai with an oni mask.
                         War Elephant: an elephant skeleton with a howdah. Teutonic Knight: a death knight.
@@ -154,7 +155,7 @@ FOOT = {
                    attack="shear", group="civilian", seed=11),
     "monk": _unit("monk", "Necromancer", "Monk", "skeleton", Gear(helmet="cowl", cloth="robe", right="staff",
                                                                     left="orb"), attack="cast", group="civilian",
-                  seed=12),
+                  seed=12, sculpted=True, eye=C.RED_EYES),
     "king": _unit("king", "Vampire Lord", "King", "vampire", Gear(helmet="crown", cloth="robe", cape=True),
                   group="civilian", seed=13),
     # the militia line: skeletons

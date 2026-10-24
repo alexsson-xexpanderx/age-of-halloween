@@ -40,10 +40,11 @@ def railing(a, b, z0, height, spacing=2.2) -> list:
     return out
 
 
-def skull(at, r=1.6, seed=0) -> list:
+def skull(at, r=1.6, seed=0, glow=None) -> list:
     from .undead import _jaw_material, _skull_material
     c = np.asarray(at, float)
-    return [S.Ellipsoid(_skull_material(seed=seed), S._orient(c + (0, 0, r * 1.05)), radii=(r, r * 1.05, r * 0.95)),
+    m = _skull_material(seed=seed) if glow is None else _skull_material(glow, seed)
+    return [S.Ellipsoid(m, S._orient(c + (0, 0, r * 1.05)), radii=(r, r * 1.05, r * 0.95)),
             S.Ellipsoid(_jaw_material(seed), S._orient(c + (0, r * 0.5, r * 0.3)), radii=(r * 0.68, r * 0.6, r * 0.38))]
 
 

@@ -178,6 +178,7 @@ class Body:
     skin: Optional[S.Material] = None
     eye: tuple = (0.61, 1.0, 0.42)  # the eyes' glow colour
     size: float = 1.0  # the head's size
+    sculpted: bool = False  # a skeleton's skull modelled bone by bone (brow, cheekbones, sockets), not one ball
 
 
 SKIN = {
@@ -202,8 +203,12 @@ EYES = {"skeleton": (0.61, 1.0, 0.42), "zombie": (1.0, 0.85, 0.3), "ghoul": (0.7
         "banshee": (0.85, 0.95, 1.0), "phantom": (1.0, 0.14, 0.06)}
 
 
+RED_EYES = (1.0, 0.14, 0.06)  # the player asked for no more green eyes (2026-10-24)
+
+
 def body(kind: str, seed: int = 0, **kw) -> Body:
-    b = Body(kind=kind, eye=EYES.get(kind, EYES["skeleton"]), **kw)
+    kw.setdefault("eye", EYES.get(kind, EYES["skeleton"]))
+    b = Body(kind=kind, **kw)
     if b.skin is None:
         b.skin = SKIN[kind](seed) if kind in SKIN else P.bone(seed)
     if kind in ("zombie", "ghoul") and "hunch" not in kw:
@@ -220,12 +225,37 @@ def _skull_shapes(b: Body, seed: int) -> list:
     from .undead import _jaw_material, _skull_material
     n = b.neck
     k = b.size
+    if b.sculpted:
+        return _sculpted_skull(n, k, b.eye, seed)
     skull_m = _skull_material(b.eye, seed)
     if b.kind == "calavera":
         skull_m = _calavera_material(b.eye, seed)
     return [S.Ellipsoid(skull_m, S._orient((0, 0.4, n + 3.6 * k)), radii=(3.4 * k, 3.6 * k, 3.3 * k)),
             S.Ellipsoid(_jaw_material(seed), S._orient((0, 1.7 * k, n + 1.0 * k)), radii=(2.3 * k, 2.1 * k,
                                                                                           1.25 * k))]
+
+
+def _sculpted_skull(n: float, k: float, glow, seed: int) -> list:
+    """A skull modelled bone by bone: the cranium, a narrower face under a heavy brow ridge, cheekbones, dark eye
+    sockets each with a glowing point deep inside, a nose hole, and the jaw with its teeth."""
+    from .undead import _jaw_material
+    bone = P.bone(seed)
+    c = np.array([0.0, 0.3, n + 3.8 * k])
+    face_at = c + (0, 1.0 * k, -0.9 * k)
+    face = eyes_material(bone, [(-0.95 * k, 0.85 * k, 0.72 * k, 0.62 * k), (0.95 * k, 0.85 * k, 0.72 * k, 0.62 * k)],
+                         glow, 0.42, P.hexrgb("#120a0c"))
+    nose = S.hull([face_at + (-0.38 * k, 1.78 * k, 0.05 * k), face_at + (0.38 * k, 1.78 * k, 0.05 * k),
+                   face_at + (0, 1.95 * k, -0.75 * k), face_at + (0, 1.3 * k, -0.2 * k)], S.mat(P.hexrgb("#120a0c")))
+    out = [S.Ellipsoid(bone, S._orient(tuple(c + (0, -0.6 * k, 0.1 * k))), radii=(2.9 * k, 3.1 * k, 2.7 * k)),
+           S.Ellipsoid(face, S._orient(tuple(face_at)), radii=(2.2 * k, 1.9 * k, 2.0 * k)),
+           S.Ellipsoid(bone, S._orient(tuple(c + (0, 2.0 * k, 0.6 * k))), radii=(2.3 * k, 0.8 * k, 0.6 * k)),  # the brow
+           nose,
+           S.Ellipsoid(_jaw_material(seed), S._orient(tuple(c + (0, 1.35 * k, -2.55 * k))),
+                       radii=(1.6 * k, 1.45 * k, 0.8 * k))]
+    for sx in (1, -1):  # the cheekbones
+        out.append(S.Ellipsoid(bone, S._orient(tuple(c + (sx * 1.75 * k, 1.6 * k, -0.75 * k))),
+                               radii=(0.7 * k, 1.0 * k, 0.5 * k)))
+    return out
 
 
 def _calavera_material(glow, seed):
@@ -314,11 +344,21 @@ def _head_shapes(b: Body, seed: int) -> list:
         horn = S.mat(P.hexrgb("#1a1414"), shine=0.4)
         shapes += [S.rod((-1.6, 0.4, n + 5.6), (-2.8, -0.8, n + 9.0), 0.7, horn, 0.1),
                    S.rod((1.6, 0.4, n + 5.6), (2.8, -0.8, n + 9.0), 0.7, horn, 0.1)]
-    if kind == "vampire":
+    if kind == "vampire":  # slicked-back black hair with a widow's peak, pointed ears, sharp brows, fangs
         hair = S.mat(P.hexrgb("#141016"), shine=0.6, gloss=30)
+        dark = S.mat(P.hexrgb("#16080c"))
         shapes += [S.ball((0, -0.5, n + 4.6), (3.15, 3.2, 2.6), hair).clip((0, 1, -0.6), 0.9),
-                   S.hull([(-0.7, 2.9, n + 1.4), (-0.4, 2.9, n + 1.4), (-0.55, 3.0, n + 0.6)], S.mat(P.BONE)),
-                   S.hull([(0.7, 2.9, n + 1.4), (0.4, 2.9, n + 1.4), (0.55, 3.0, n + 0.6)], S.mat(P.BONE))]
+                   S.hull([(-1.5, 2.55, n + 6.1), (1.5, 2.55, n + 6.1), (0, 3.2, n + 4.9), (0, 2.2, n + 6.6),
+                           (0, 1.6, n + 6.0)], hair),  # the widow's peak
+                   S.Ellipsoid(b.skin, S._orient((0, 2.3, n + 0.7)), radii=(1.3, 1.1, 1.0)),  # a pointed chin
+                   S.Ellipsoid(b.skin, S._orient((0, 3.15, n + 2.8)), radii=(0.35, 0.45, 0.85)),  # a thin nose
+                   S.Ellipsoid(dark, S._orient((0, 2.95, n + 1.55)), radii=(1.05, 0.3, 0.2)),  # a thin mouth
+                   S.hull([(-0.75, 2.95, n + 1.55), (-0.4, 2.95, n + 1.55), (-0.58, 3.05, n + 0.75)], S.mat(P.BONE)),
+                   S.hull([(0.75, 2.95, n + 1.55), (0.4, 2.95, n + 1.55), (0.58, 3.05, n + 0.75)], S.mat(P.BONE))]
+        for sx in (1, -1):
+            shapes += [S.hull([(sx * 2.7, 0.2, n + 2.7), (sx * 2.7, 0.7, n + 4.1), (sx * 2.6, -0.5, n + 3.6),
+                               (sx * 4.1, -0.7, n + 5.4)], b.skin),  # pointed ears
+                       S.rod((sx * 0.35, 3.25, n + 4.55), (sx * 2.0, 2.75, n + 5.25), 0.24, dark, 0.14)]  # brows
     if kind == "jiangshi":  # the Qing hat and the yellow paper talisman on the forehead
         hat = S.mat(P.hexrgb("#1a1418"))
         shapes += [S.rod((0, 0.3, n + 5.6), (0, 0.3, n + 6.6), 3.6, hat, 3.1),
@@ -497,15 +537,16 @@ def _helmet_shapes(b: Body, kind: str, seed: int) -> list:
         mantle = cloth(DRAB[seed % len(DRAB)], seed=seed) if kind == "hood" else hood
         return [S.ball((0, -0.3, top - 0.8), (3.9, 4.1, 4.3), hood).clip((0, 1, 0), 1.9),
                 S.rod((0, -0.2, b.shoulder + 1.6), (0, -0.2, b.shoulder - 1.4), 2.6, mantle, 5.0)]
-    if kind == "crown":
+    if kind == "crown":  # on the top of the head, above the brow (lower, its band crossed the eyes like make-up)
         gold = P.metal(P.GOLD, seed=seed, shine=0.8)
-        out = [S.rod((0, 0.3, top + 0.2), (0, 0.3, top + 1.6), 3.3, gold, 3.4, capped=False)]
+        z0 = n + 5.6 * b.size
+        out = [S.rod((0, 0.3, z0), (0, 0.3, z0 + 1.1), 2.75, gold, 2.85, capped=False)]
         for a in range(0, 360, 60):
             r = math.radians(a)
-            out.append(S.hull([(math.cos(r) * 3.0 - 0.6, math.sin(r) * 3.0 + 0.3, top + 1.5),
-                               (math.cos(r) * 3.0 + 0.6, math.sin(r) * 3.0 + 0.3, top + 1.5),
-                               (math.cos(r) * 3.3, math.sin(r) * 3.3 + 0.3, top + 3.2)], gold))
-        out.append(S.ball((0, 3.5, top + 1.0), 0.5, S.mat(P.BLOOD, glow=0.5)))
+            out.append(S.hull([(math.cos(r) * 2.6 - 0.5, math.sin(r) * 2.6 + 0.3, z0 + 1.0),
+                               (math.cos(r) * 2.6 + 0.5, math.sin(r) * 2.6 + 0.3, z0 + 1.0),
+                               (math.cos(r) * 2.9, math.sin(r) * 2.9 + 0.3, z0 + 2.6)], gold))
+        out.append(S.ball((0, 3.1, z0 + 0.55), 0.3, S.mat(P.BLOOD, glow=0.5)))
         return out
     if kind == "turban":
         return [S.torus((0, 0.2, top - 0.6), 3.2, 1.3, team_cloth(0.65, seed)),
@@ -685,7 +726,7 @@ def weapon(name: str, seed: int = 0) -> list:
         shapes, d = _shaft(20.0, back=6.0, up_deg=88, r=0.45, m=P.wood(P.hexrgb("#3a2a22"), P.hexrgb("#160e0a"),
                                                                          along=2))
         top = d * 14.0
-        shapes += [_moved(s, top - (0, 0, 0.6)) for s in skull((0, 0, 0), 1.5, seed)]
+        shapes += [_moved(s, top - (0, 0, 0.6)) for s in skull((0, 0, 0), 1.5, seed, RED_EYES)]
         flame = S.Ellipsoid(S.mat(P.SLIME, glow=1.0), S._orient(top + (0, 0, 4.2)), radii=(0.9, 0.9, 1.8))
         flame.casts = False
         shapes.append(flame)
@@ -835,6 +876,18 @@ def person(key: str, name: str, replaces: str, b: Body, g: Gear = Gear(), attack
                                  S.mat(P.hexrgb("#d8d0c0"))) for k in range(3)]]
     if g.back == "keg":
         pass
+    if b.kind == "vampire":  # the tall stand-up collar behind the head: black outside, blood red inside
+        def lining(look):
+            return np.where((look.n[:, 1] > 0.25)[:, None], P.hexrgb("#8a0c16"), P.hexrgb("#121014"))
+        collar = S.Material(color=lining, shine=0.3, vivid=0.7)
+        for sx in (1, -1):
+            base = [(sx * 0.6, -1.9, sh + 0.6), (sx * 3.8, -1.2, sh + 0.4)]
+            tip = [(sx * 1.3, -2.6, b.neck + 6.6), (sx * 5.0, -0.6, b.neck + 5.4)]
+            pts = base + tip
+            torso_shapes.append(S.hull(pts + [(x, y - 0.45, z) for x, y, z in pts], collar))
+        torso_shapes += [S.Ellipsoid(cloth(P.hexrgb("#e8e2d8"), seed=seed), S._orient((0, 2.4, sh - 1.4)),
+                                     radii=(1.3, 0.8, 1.9)),  # a white cravat
+                         S.ball((0, 3.1, sh - 1.0), 0.45, S.mat(P.BLOOD, shine=0.8, glow=0.3))]  # a red brooch
 
     def arm(nm, x, sign, item_name, item):
         elbow = (x + sign * 0.3, 0.4, sh - 5.0)

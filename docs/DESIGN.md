@@ -35,7 +35,7 @@ group has a preview sheet, `previews/cast_<group>.png`.
 | Group | Halloween take |
 |---|---|
 | Villagers | phantoms: pale glowing spectres in hooded shrouds whose hems trail into mist, two red eyes in the dark under the hood, a sash in the owner's colour, each job with its tool and its load (logs, ore, pumpkins, meat, fish) |
-| Monk / King | a hooded necromancer with a skull staff / a vampire lord in a high-collared cloak |
+| Monk / King | a necromancer: a skull with red eyes in the dark of a black cowl, a skull staff / a vampire lord: slicked-back black hair with a widow's peak, pointed ears, red eyes, fangs, a crown, and a tall collar lined blood red |
 | Swordsmen, spearmen | skeleton soldiers whose armour gets better each age |
 | Archers | skeleton archers; crossbowmen are ghouls; skirmishers are imps with javelins |
 | Eagle Warriors | Camazotz bat-men |
