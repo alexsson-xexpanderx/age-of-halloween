@@ -54,7 +54,7 @@ TRACK_LENGTH = 0.6 * TILE  # one piece, behind the train: longer than the cart t
 TEXTS = {"name": "Ghost Train", "creation": "Build Ghost Train",
          "help": "Build <b> Ghost Train<b> (<cost>) \nTrades by land, laying its own rails as it goes: carries goods from "
                  "your Market to another player's Market and brings back gold. The farther the Market, the higher "
-                 "your profit. To trade, click the Ghost Train, then right-click an allied or neutral Market. <i> Upgrades: "
+                 "your profit. To trade, click it, then right-click an allied or neutral Market. <i> Upgrades: "
                  "more resistant to Monks (Monastery).<i> \n<hp> <attack> <armor> <piercearmor> <range>"}
 SHORT_HELP = "Build <b> Ghost Train<b> (<cost>) \nTrades by land, laying its own rails."
 
