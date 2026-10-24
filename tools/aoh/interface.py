@@ -5,20 +5,20 @@ the game view left transparent: 51101-51120 for 800x600, 51121-51140 for 1024x76
 1280x1024 (UserPatch's data mod format calls this uiBaseId 51100, uiStride 20). UserPatch builds its
 widescreen panels from the same pictures.
 
-Each picture is repainted in the Minecraft style, every pixel keeping its place:
+Each picture is repainted in the Halloween style, every pixel keeping its place:
 
 * the resource bar gets one fixed layout: each resource's item in a 16x16 square, then 2 pixels on, the box the
-  game writes the amount in, flat and nearly black (the player asked for no shading, and darker, so the white
-  stands out), a five-digit amount in its middle; planks all around;
-* the parchment the game writes on (large light areas, with their shaded border) becomes the grey of Minecraft's
-  inventory, with a straight top edge, its black edge, white bevel at the top left and dark bevel at the bottom
-  right;
-* large dark areas become inventory slots, sunk in;
-* everything else, the carved frames, becomes planks, as dark or light as the original frame was, so the
+  game writes the amount in, flat and nearly black (as the player asked for Age of Minecraft: no shading, and
+  darker, so the white stands out), a five-digit amount in its middle; dark old planks all around;
+* the parchment the game writes on (large light areas, with their shaded border) becomes an old, bone-pale panel,
+  with a straight top edge, a black edge, light along its top left and shade along its bottom right;
+* large dark areas become slots, sunk in;
+* everything else, the carved frames, becomes weathered planks, as dark or light as the original frame was, so the
   game's white and black text stays readable on it;
-* where the panels meet the game view they get a black edge, like every Minecraft window;
-* the five resource icons in the top bar (wood, food, gold, stone, population) become an oak log, a leg of meat, a
-  gold block, cobblestone and a villager's face, each filling its square, so they line up.
+* where the panels meet the game view they get a black edge;
+* the five resource icons in the top bar (wood, food, gold, stone, population) become a log, a pumpkin, a stack of
+  gold coins, a rough stone and a skull, drawn like the units (sculpt.py), each filling its square, so they line
+  up.
 
 Every panel picture, at every size, has its five icons every 77 pixels from x 8, each followed by a dark box
 that ends 69 pixels after the icon's left edge; only the rows differ (4-21 at 800x600 and 1024x768, 10-27 at
@@ -28,7 +28,7 @@ ending 66 pixels after the icon's left edge (measured on photos of the game), so
 left: the box, 17 to 71, has a five-digit amount in its middle and room for "4/1000".
 
 UserPatch draws its own food icon (`FOOD`, a steak on black, 22x17) over the bar's, at the icon's left edge and
-the box's top row, in every panel: it becomes the bar's leg of meat at the same place, on clear pixels
+the box's top row, in every panel: it becomes the bar's pumpkin at the same place, on clear pixels
 (`food_icon`), or the steak would hide it.
 """
 from __future__ import annotations
@@ -38,11 +38,12 @@ from typing import Callable, Optional
 
 import numpy as np
 
+from . import nightscape as N
+from . import paint as P
+from . import sculpt as S
 from . import slp
-from . import voxel as V
 from .palette import Quantiser
-from .render import fit_camera, render
-from .textures import Painter, parse
+from .textures import parse
 
 BASE, STRIDE = 51100, 20
 SCREENS = ((800, 600), (1024, 768), (1280, 1024))
@@ -51,12 +52,12 @@ CELL = 16  # each resource's item fills a 16x16 square from 1 pixel before the i
 BOX = (17, 71)  # ...then 2 pixels on, the box the game writes the amount in (from the icon's left edge)
 FOOD = 53010  # UserPatch's food icon, which it draws over the bar's
 RESOURCES = ("wood", "food", "gold", "stone", "population")
-GUI = {"panel": "#c6c6c6", "light": "#ffffff", "shade": "#555555", "edge": "#000000",
-       "slot": "#8b8b8b", "slot_light": "#ffffff", "slot_shade": "#373737",
-       "count": "#1e1e1e"}  # where the bar's numbers are: flat
-PLANKS = ("birch_planks", "oak_planks", "jungle_planks", "acacia_planks", "spruce_planks", "dark_oak_planks")
+GUI = {"panel": "#c2b6a2", "light": "#ece2d0", "shade": "#5a4c42", "edge": "#000000",
+       "slot": "#3a3440", "slot_light": "#6a6274", "slot_shade": "#141018",
+       "count": "#1a1418"}  # where the bar's numbers are: flat
+WOOD = ("#5a463c", "#16100e")  # the planks' light and dark wood, scaled to each frame's brightness
 LUMA = np.array([0.299, 0.587, 0.114])
-PIXEL = 2  # screen pixels per Minecraft pixel, like Minecraft's GUI scale 2
+PIXEL = 2  # how wide the panels' edges are
 
 
 def panels(get: Callable[[int], Optional[bytes]]) -> list[tuple[int, tuple[int, int], bytes]]:
@@ -204,19 +205,18 @@ def _near_edge(m: np.ndarray, r: int, sides: str) -> np.ndarray:
 
 # --------------------------------------------------------------------------- painting
 
-def _tile(tex: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
-    big = tex[..., :3].repeat(PIXEL, 0).repeat(PIXEL, 1)
-    reps = (shape[0] // big.shape[0] + 1, shape[1] // big.shape[1] + 1, 1)
-    return np.tile(big, reps)[:shape[0], :shape[1]]
+@lru_cache(maxsize=8)
+def _boards(shape: tuple[int, int]) -> np.ndarray:
+    return N.boards(shape[0], shape[1], P.hexrgb(WOOD[0]), P.hexrgb(WOOD[1]), bw=11, seed=5, across=True)
 
 
-def _planks(target: float) -> np.ndarray:
-    """The plank texture nearest in brightness to `target`, nudged to match it."""
-    types = V.all_blocks()
-    best = min(PLANKS, key=lambda n: abs((types[n].faces["front"][..., :3] @ LUMA).mean() - target))
-    tex = types[best].faces["front"].copy()
-    tex[..., :3] *= np.clip(target / max(1e-3, (tex[..., :3] @ LUMA).mean()), 0.8, 1.25)
-    return np.clip(tex, 0, 1)
+FLOOR = 0.17  # the planks' darkest: well above the amount boxes' near-black, so each box stands out on them
+
+
+def _planks(shape: tuple[int, int], target: float) -> np.ndarray:
+    """Weathered planks over a whole picture, as light as `target` on average, never as dark as the boxes."""
+    tex = _boards(shape)
+    return np.clip(tex * target / max(1e-3, float((tex @ LUMA).mean())), FLOOR, 1)
 
 
 def _bevel(rgb: np.ndarray, m: np.ndarray, fill: str, tl: str, br: str, edge: Optional[str]) -> None:
@@ -232,7 +232,7 @@ def _bevel(rgb: np.ndarray, m: np.ndarray, fill: str, tl: str, br: str, edge: Op
 
 
 def restyle(rgb: np.ndarray, opaque: np.ndarray) -> np.ndarray:
-    """A panel picture (RGB 0..1) in the Minecraft style; raises ValueError if its resource bar is not laid out
+    """A panel picture (RGB 0..1) in the Halloween style; raises ValueError if its resource bar is not laid out
     like every known one (it then keeps its look)."""
     lum = rgb @ LUMA
     bar = _top_bar(opaque)
@@ -250,7 +250,7 @@ def restyle(rgb: np.ndarray, opaque: np.ndarray) -> np.ndarray:
     frame = opaque & ~paper & ~slots & ~counts
     out = np.zeros_like(rgb)
     if frame.any():
-        out[frame] = _tile(_planks(float(lum[frame].mean())), opaque.shape)[frame]
+        out[frame] = _planks(opaque.shape, float(lum[frame].mean()))[frame]
     _bevel(out, slots, GUI["slot"], GUI["slot_shade"], GUI["slot_light"], None)
     _bevel(out, paper, GUI["panel"], GUI["light"], GUI["shade"], GUI["edge"])
     out[counts] = parse(GUI["count"])[:3]  # flat, no shading
@@ -286,7 +286,7 @@ def encode(original: bytes, palette: np.ndarray, quant: Quantiser) -> bytes:
 
 
 def food_icon(original: bytes, quant: Quantiser) -> bytes:
-    """UserPatch's food icon, same frames and sizes: the bar's leg of meat, where the bar has it (the frame's top
+    """UserPatch's food icon, same frames and sizes: the bar's pumpkin, where the bar has it (the frame's top
     left is the icon's left edge and the box's top row), the rest clear, so the bar shows around it."""
     icon = item("food")
     solid = icon[..., 3] > 0
@@ -307,58 +307,53 @@ def food_icon(original: bytes, quant: Quantiser) -> bytes:
 
 # --------------------------------------------------------------------------- resource icons
 
-ART = {
-    "food": (["......kkkkkk....",  # a leg of meat on the bone, the way games draw meat
-              "....kkrRRrrrkk..",
-              "...krRRrrrrrrrk.",
-              "..krRrrrrrrrrrdk",
-              "..krrrrrrrrrrrdk",
-              "..krrrrrrrrrrddk",
-              "..krrrrrrrrrdddk",
-              "...krrrrrrrdddk.",
-              "...kkrrrrddddk..",
-              "..kwwkkdddkkk...",
-              ".kwwwk.kkk......",
-              "kwwwk...........",
-              "kwkwwk..........",
-              ".k.kk..........."],
-             {"k": "#2e0a08", "r": "#b8402c", "R": "#e07a5c", "d": "#7e2a1c", "w": "#f2eee0"}),
-    "population": (None, {"k": "#24160c", "s": "#b8866c", "b": "#4a2c22", "w": "#f0f0f0", "g": "#2f8a3a",
-                          "n": "#9a6c56", "m": "#7a5040"}),
-}
+
+def _log() -> list:
+    """A cut log lying across, its rings showing at the near end."""
+    bark = P.bark(P.hexrgb("#6a5040"), P.hexrgb("#2a1c14"), seed=3)
+    rings = S.Material(color=lambda l: P.mix(P.hexrgb("#e0b880"), P.hexrgb("#8a5a30"),
+                                             (np.sin(np.hypot(l.p[:, 0], l.p[:, 1]) * 3.0) > 0.3).astype(float)))
+    return [S.rod((-4.5, 0, 3.6), (4.0, 0, 3.6), 3.6, bark), S.rod((4.0, 0, 3.6), (4.6, 0, 3.6), 3.3, rings)]
 
 
-VILLAGER = ["sssssss", "sbbbbbs", "swgsgws", "sssnsss", "sssnsss", "ssmnmss", "sssssss"]  # 16x16 doubled, edged
+def _pumpkin() -> list:
+    body = S.Ellipsoid(P.pumpkin(seed=4), S._orient((0, 0, 3.2)), radii=(4.4, 4.2, 3.4))
+    return [body, *S.limb((0, 0, 6.2), (0.6, 0, 7.8), 0.7, P.mottled(P.STEM), 0.5)]
 
 
-def _doubled(rows: list[str]) -> list[str]:
-    """A grid at twice the size: each pixel two by two."""
-    return ["".join(c * 2 for c in row) for row in rows for _ in range(2)]
+def _coins() -> list:
+    gold = S.mat(P.hexrgb("#ffc830"), shine=0.9, gloss=30, vivid=1.0, glow=0.35)  # bright, as gold is in a game
+    out = [S.rod((0.4 * (k % 2), 0, k * 1.0), (0.4 * (k % 2), 0, k * 1.0 + 0.8), 3.4, gold) for k in range(4)]
+    return out + [S.rod((4.6, -0.6, 3.6), (4.6, 0.4, 3.6), 3.4, gold)]  # one standing on its edge
 
 
-def _outlined(rows: list[str]) -> list[str]:
-    """A grid with a one-pixel dark ("k") edge around it, so it stands out on the planks."""
-    w = len(rows[0]) + 2
-    return ["k" * w] + ["k" + row + "k" for row in rows] + ["k" * w]
+def _stone() -> list:
+    rng = np.random.default_rng(6)
+    pts = rng.normal(0, 1, (24, 3)) * (4.2, 3.2, 3.0) + (0, 0, 3)
+    return [S.hull(pts, P.mottled(P.hexrgb("#b4b0bc"), P.hexrgb("#5a5664"), 1.2, 0.5, 6))]
+
+
+def _skull() -> list:
+    from .graveyard import skull
+    return skull((0, 0, 0), 2.0, seed=7)
+
+
+ICONS = {"wood": (_log, -55.0), "food": (_pumpkin, -90.0), "gold": (_coins, -70.0), "stone": (_stone, -60.0),
+         "population": (_skull, -90.0)}
 
 
 @lru_cache(maxsize=None)
 def item(what: str) -> np.ndarray:
-    """A resource icon, RGBA 0..1, CELL x CELL, in the middle of its square: a drawn leg of meat for food, a
-    villager's face for population, little blocks for the rest (all as big, so they line up)."""
-    if what in ART:
-        rows, legend = ART[what]
-        if rows is None:  # population: a villager's face, like the one on the menu's Learn to Play banner
-            rows = _outlined(_doubled(VILLAGER))
-        rgba = Painter(f"icon_{what}").grid(rows, {".": None, **legend}, noise=0.04)[..., :4]
-    else:
-        s = V.Structure(what, origin=(0.5, 0.5))
-        s.set(0, 0, 0, {"wood": "oak_log", "gold": "gold_block"}.get(what, "cobblestone"))
-        root, scale = s.part(V.all_blocks()), 0.58  # a block, no bigger than the 16x16 square
-        cam = fit_camera(root, V.BUILDING_HEADING, scale=scale, pad=1)
-        rgba = render(root, V.BUILDING_HEADING, camera=cam, shadow=False).to_rgba().astype(np.float64) / 255
-    ys, xs = np.nonzero(rgba[..., 3] > 0)
-    rgba = rgba[ys.min():ys.max() + 1, xs.min():xs.max() + 1][:CELL, :CELL]
+    """A resource icon, RGBA 0..1, CELL x CELL, in the middle of its square: a log, a pumpkin, gold coins, a stone
+    and a skull, drawn like the units and all as big, so they line up."""
+    build, heading = ICONS[what]
+    shapes = build()
+    for s in shapes:  # their own colours, not drained like the units' in the night (they are this small)
+        s.material.vivid = max(s.material.vivid, 0.85)
+    rgba = N.model(shapes, heading=heading, height=CELL - 1, elevation=25)
+    if rgba.shape[1] > CELL - 1:
+        rgba = N.model(shapes, heading=heading, width=CELL - 1, elevation=25)
+    rgba = rgba[:CELL, :CELL]
     out = np.zeros((CELL, CELL, 4))
     y0, x0 = (CELL - rgba.shape[0]) // 2, (CELL - rgba.shape[1]) // 2
     out[y0:y0 + rgba.shape[0], x0:x0 + rgba.shape[1]] = rgba

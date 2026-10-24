@@ -29,16 +29,15 @@ possible, not pixelated like Minecraft." Their choices:
 
 ## How it is drawn
 
-`sculpt.py` is the new renderer: exact curved shapes (Ellipsoid, Frustum, Lathe, Convex; `clip` cuts them with
+`sculpt.py` is the renderer: exact curved shapes (Ellipsoid, Frustum, Lathe, Convex; `clip` cuts them with
 planes), 3x3 samples per pixel, ink lines on depth edges, the dark mood light, glowing materials. It takes the same
 `geometry.Part` trees and `Pose`s as the old box renderer, so `animation.py`'s rigs move the new models unchanged;
 shapes go in a Part's `boxes` list. `paint.py` has the surfaces (pumpkin ribs, wood, bricks, shingles, bone, bark,
-team cloth, metal). `tools/style_sheet.py` renders `previews/style.png`, the look test.
+team cloth, metal). export.py, props.py and concept_sheet.py draw with it. The menus are painted with
+`nightscape.py` (night sky, moon, hills, mist, stone and planks, the title in a Windows font) and `trinkets.py`
+(the menu's button objects as sculpt models).
 
-Still to switch: `export.py` and `props.py` import the old `render`/`fit_camera` from render.py; they must use
-sculpt's (which also draws old boxes, so models can move over one at a time).
-
-## The cast (planned)
+## The cast
 
 - Villagers: zombie peasants (each job with its tool). Monk: a hooded necromancer. King: a vampire lord.
 - Militia line: skeleton soldiers, better armour each age (done: militia, man-at-arms). Spear line: skeleton
@@ -63,3 +62,14 @@ sculpt's (which also draws old boxes, so models can move over one at a time).
 
 - 2026-10-23: repo, renderer, materials, the look test (Pac-Man and the giant, two skeletons, a Victorian house, a
   graveyard wall, dead trees), darker mood.
+- 2026-10-23/24: all 105 units; every building in the five cultures and ages, walls, gates, towers, castles, the
+  wonders; trees, mines and decorations; the cauldron (volcano), the witch's brew (lava) and its map, pumpkin patch
+  farms, the texts (Ghost Train, Bone Dragon, Cauldron); the menu (a churchyard at night), the loading screen (a
+  full moon), the other screens (the crypt), the panels (planks, a bone-pale panel, sculpt icons), the app icon (the
+  giant's jack-o'-lantern) and the Bone Dragon's unit icon; docs.
+
+## Next
+
+- Build into the player's game (`build_mod.bat`; the first build opens SetupAoC.exe for "Install") and look at it
+  in game: the menu's button places, the screens, the panels' readability, unit sizes.
+- Not yet drawn as Halloween: the Pac-Man and giant unit icons (Age of Minecraft's: hands-off without asking).

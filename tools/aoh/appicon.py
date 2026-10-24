@@ -1,9 +1,9 @@
-"""The Age of Halloween icon: a villager king (a villager's head with a golden crown).
+"""The Age of Halloween icon: a jack-o'-lantern with the giant Pac-Man's mean face, its mouth a little open.
 
-It is rendered with the mod's own block renderer at every size an icon needs. `ico()` makes the icon file the
-shortcut uses. `into_exe()` puts it into a copy of the game exe (the mod's own age_of_halloween.exe, never the
-game's): each icon picture the exe has is redrawn in place at its own size and colour depth, so no other byte of
-the exe moves. `png()` also serves the build's pictures of the original menus.
+It is drawn like the units (sculpt.py) at every size an icon needs. `ico()` makes the icon file the shortcut uses.
+`into_exe()` puts it into a copy of the game exe (the mod's own age_of_halloween.exe, never the game's): each icon
+picture the exe has is redrawn in place at its own size and colour depth, so no other byte of the exe moves. `png()`
+also serves the build's pictures of the original menus.
 """
 from __future__ import annotations
 
@@ -15,34 +15,25 @@ from typing import Optional
 import numpy as np
 
 from . import pe
-from . import voxel as V
-from .geometry import Part, cuboid
-from .render import fit_camera, render
-from .textures import FACES, Painter, parse
+from .geometry import Part
 
 ICO_SIZES = (16, 24, 32, 48, 64, 128, 256)
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
 def model() -> Part:
-    from .units import VILLAGER_SKIN, villager_head
-    faces, extras = villager_head(Painter("icon_king"), VILLAGER_SKIN)
-    boxes = [cuboid((-4, -4, 0), (8, 8, 10), faces)]
-    boxes += [cuboid((b.lo[0], 4, b.lo[2] - 24), b.hi - b.lo, b.faces) for b in extras]  # the nose
-    gold = {f: np.tile(parse("#f2c43a"), (2, 2, 1)) for f in FACES}
-    boxes.append(cuboid((-4.5, -4.5, 10), (9, 9, 1.5), gold))  # the crown's band and its eight points
-    for x, y in ((-4.5, -4.5), (2.5, -4.5), (-4.5, 2.5), (2.5, 2.5), (-1, -4.5), (-4.5, -1), (2.5, -1), (-1, 2.5)):
-        boxes.append(cuboid((x, y, 11.5), (2, 2, 2.5), gold))
-    return Part("king", boxes=boxes)
+    from .trinkets import lantern
+    return lantern()
 
 
 @lru_cache(maxsize=None)
 def image(size: int) -> np.ndarray:
     """The icon at size x size, RGBA uint8, centred on a transparent background."""
-    root, heading = model(), V.BUILDING_HEADING
-    cam = fit_camera(root, heading, scale=1.0, pad=0)
-    cam = fit_camera(root, heading, scale=(size - 2) / max(cam.width, cam.height), pad=1)
-    rgba = render(root, heading, camera=cam, shadow=False).to_rgba()[:size, :size]
+    from .nightscape import model as draw
+    rgba = draw(model(), width=size - 2, elevation=12)
+    if rgba.shape[0] > size - 2:
+        rgba = draw(model(), height=size - 2, elevation=12)
+    rgba = (np.clip(rgba, 0, 1) * 255 + 0.5).astype(np.uint8)[:size, :size]
     out = np.zeros((size, size, 4), np.uint8)
     y0, x0 = (size - rgba.shape[0]) // 2, (size - rgba.shape[1]) // 2
     out[y0:y0 + rgba.shape[0], x0:x0 + rgba.shape[1]] = rgba

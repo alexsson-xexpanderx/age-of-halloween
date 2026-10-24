@@ -819,13 +819,14 @@ def add_giant_icon(data: bytes, index: int, quant) -> tuple[Optional[bytes], str
     return slp.append_frames(data, [slp.SlpFrame(px, (0, 0))]), f"the giant Pac-Man is icon {index} ({w}x{h})"
 
 
-DRAGON_ICON_COLOURS = {0: (34, 18, 52), 1: (226, 222, 190), 2: (26, 26, 30), 3: (78, 78, 88), 4: (214, 120, 255),
-                       5: (120, 18, 18), 6: (255, 236, 90), 7: (255, 150, 24), 8: (226, 58, 12), 9: (104, 104, 116)}
+DRAGON_ICON_COLOURS = {0: (34, 18, 52), 1: (226, 222, 190), 2: (214, 198, 150), 3: (120, 100, 66), 4: (124, 255, 106),
+                       5: (30, 10, 14), 6: (216, 255, 154), 7: (122, 216, 74), 8: (42, 138, 42), 9: (60, 40, 30)}
 
 
 def dragon_icon(size: int = 36) -> np.ndarray:
-    """A unit icon (drawn at 36x36, scaled to `size`): the dragon's head side on, breathing fire, against the End's
-    dark purple sky with a few stars. Colours are keys of DRAGON_ICON_COLOURS."""
+    """A unit icon (drawn at 36x36, scaled to `size`): the Bone Dragon's skull side on, breathing green fire, against
+    a dark purple night sky with a few stars. Colours are keys of DRAGON_ICON_COLOURS (bone where Age of Minecraft's
+    dragon was black, its eye and fire green)."""
     sky, star, black, grey, eye, mouth, yellow, orange, red, nostril = range(10)
     px = np.full((36, 36), sky, np.int16)
     for y, x in ((3, 3), (5, 27), (10, 33), (29, 25), (33, 31), (31, 18)):

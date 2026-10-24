@@ -4,7 +4,7 @@
     python tools/build_mod.py --game "C:\\Program Files (x86)\\Microsoft Games\\Age of Empires II"
 
 It reads your game's palette, sprite frame counts and graphics table, renders
-every Minecraft sprite to match exactly, and writes a UserPatch data mod, a game
+every Halloween sprite to match exactly, and writes a UserPatch data mod, a game
 of its own called Age of Halloween:
 
     Games\\age_of_halloween.xml
@@ -508,7 +508,7 @@ def main(argv=None) -> int:
         static_blanks = {s: why for s, why in sprite_plan.blanks.items()
                          if only is None or blank_group(why) in only}
 
-    # farms are terrain: their textures in terrain.drs become Minecraft farmland
+    # farms are terrain: their textures in terrain.drs become pumpkin patches
     farms: list[tuple[int, str, str, int]] = []
     if only is None or only & {"farms", "buildings"}:
         for slp_id, stage, source in farmland.farm_slps(game.terrains):
@@ -742,9 +742,9 @@ def menu_palette(game: Game, old: np.ndarray) -> np.ndarray:
 
 
 def menu_settings(game: Game, screen_files, palette: np.ndarray, log) -> None:
-    """The main menu's screen files (the menu, its dialogue) with Minecraft's buttons: the game fills the Single
-    Player menu's buttons in Minecraft's grey with its light and dark edges, and writes the names in white, the one
-    the mouse is on in yellow. Written into every archive that has them."""
+    """The main menu's screen files (the menu, its dialogue) with Halloween buttons: the game fills the Single
+    Player menu's buttons dark purple with light and dark edges, and writes the names in white, the one the mouse is
+    on in pumpkin orange. Written into every archive that has them."""
     conf = menu.settings(palette)
     for sc in screen_files:
         if sc.palette != menu.PALETTE:
@@ -756,16 +756,16 @@ def menu_settings(game: Game, screen_files, palette: np.ndarray, log) -> None:
         for _, drs in game._searched():
             if sc.id in drs.ids("bina"):
                 drs.put(sc.id, new, "bina")
-        log(f"main menu: Minecraft buttons and white names (screen file {sc.id}), its own palette {menu.PALETTE}")
+        log(f"main menu: Halloween buttons and white names (screen file {sc.id}), its own palette {menu.PALETTE}")
 
 
 def draw_loading(game: Game, data: bytes, pal_id: int, palette: np.ndarray, log) -> bytes:
-    """The Minecraft loading screen, and its own palette (only this screen uses it) in every archive that has it."""
+    """The Halloween loading screen, and its own palette (only this screen uses it) in every archive that has it."""
     picture, pal = loadscreen.encode(data, palette)
     for _, drs in game._searched():
         if pal_id in drs.ids("bina"):
             drs.put(pal_id, loadscreen.jasc(pal), "bina")
-    log(f"loading screen: a Minecraft title screen, with its own palette {pal_id}")
+    log(f"loading screen: a Halloween title card, with its own palette {pal_id}")
     return picture
 
 
@@ -1016,14 +1016,14 @@ def save_pictures(game: Game, pictures: dict[int, int], out: Path) -> list[str]:
 
 
 def save_menu_pictures(game: Game, folder: Path, log) -> None:
-    """The game's main menu pictures as PNG files, so a Minecraft menu can be drawn over exactly the same places."""
+    """The game's main menu pictures as PNG files, so a Halloween menu can be drawn over exactly the same places."""
     out = folder / "menu_originals"
     notes = save_pictures(game, {sid: MENU_PALETTE for sid in MENU_PICTURES}, out)
     log(f"menu pictures: {'; '.join(notes) or 'none found'}" + (f", saved in {out}" if out.exists() else ""))
 
 
 def save_screen_pictures(game: Game, pictures: dict[int, int], folder: Path, log) -> None:
-    """The pictures of the game's other screens (setup, options, loading, dialogues...) as PNG files, so Minecraft
+    """The pictures of the game's other screens (setup, options, loading, dialogues...) as PNG files, so Halloween
     ones can be drawn to fit their layout."""
     out = folder / "screen_originals"
     notes = save_pictures(game, pictures, out)
@@ -1463,7 +1463,7 @@ def write_report(game: Game, planned, skipped, blanks, header: list[str], path: 
               for s, stage, source, n in farms]
     lines += ["", "INTERFACE PANELS AND SCREENS (slp, size, result)"]
     for s, (w, h) in panels:
-        result = "planned" if failed is None else ("Minecraft style" if s not in failed else failed[s])
+        result = "planned" if failed is None else ("Halloween style" if s not in failed else failed[s])
         lines.append(f"  {s:6d}  {w}x{h:<5d} {result}")
     lines += ["", "SCREENS (screen file: its pictures and palette, then its settings)"]
 

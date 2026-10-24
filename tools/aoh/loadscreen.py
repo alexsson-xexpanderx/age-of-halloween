@@ -1,105 +1,105 @@
-"""The loading screen (interfac.drs 50163), as a Minecraft title screen.
+"""The loading screen (interfac.drs 50163), as a Halloween title card.
 
-A light blue sky with Minecraft's flat blocky clouds and square sun, the gold and grass block logo from the main
-menu at the top (with a dark shadow, so it stands out from the sky), and a floating island of blocks (grass, a
-pond, oak trees, flowers and a small house, rendered with the mod's own block renderer) at the bottom. Between them
-is light sky only: the game writes its loading text there, in black (a light band at the very bottom did not help,
-so the text is higher up, where the island was).
+A night sky with a huge full moon in the middle, the "AGE OF HALLOWEEN" title of the main menu at the top, and at
+the bottom, black against the moon, a churchyard on a hill: a bare crooked tree, crosses and gravestones, an iron
+fence and a haunted house with lit windows, jack-o'-lanterns glowing in the grass and bats crossing the moon. The game
+writes its loading text in black in the middle of the screen: there the moon is pale and smooth, so it shows.
 
 Only this screen uses its palette (50563), and the original is mostly greys: the mod gives it a palette of its own,
 made from the new picture (`palette`), keeping the twenty Windows colours at 0-9 and 246-255 where they are.
 """
 from __future__ import annotations
 
+import math
 from functools import lru_cache
 
 import numpy as np
 
+from . import nightscape as N
+from . import paint as P
 from . import slp
-from . import voxel as V
 from .palette import _lab
 
 W, H = 800, 600
 RESERVED = list(range(10)) + list(range(246, 256))  # the Windows colours: kept as they are
-SKY_TOP, SKY_LOW = np.array([0x8c, 0xb4, 0xfa]) / 255, np.array([0xe2, 0xee, 0xff]) / 255
-LOGO_W, LOGO_Y = 460, 14  # the logo, at the top
-ISLAND = (380, 160)  # at most this big, at the bottom: the middle of the screen is for the game's black text
-def island() -> V.Structure:
-    """A floating island: grass on dirt, stone and ores under it, a pond, oak trees, flowers and a small house."""
-    from .nature import flower_sprite, grass_sprite, tree
-    s = V.Structure("island", origin=(9, 9))
-    rng = np.random.default_rng(20)
-    n = 18
-    for x in range(n):
-        for y in range(n):
-            r = np.hypot(x - 8.5, y - 8.5)
-            if r > 9.2:
-                continue
-            depth = int(max(1, (9.2 - r) * 0.9 + rng.integers(0, 2)))  # thicker in the middle
-            for z in range(-depth, 0):
-                block = "dirt" if z >= -2 else ("stone" if rng.random() > 0.12 else "coal_ore")
-                s.set(x, y, z, block)
-            s.set(x, y, 0, "grass_block")
-    for x, y in ((11, 4), (12, 4), (13, 5), (12, 5), (11, 5), (12, 6), (13, 6)):  # the pond
-        s.set(x, y, 0, "water")
-        s.set(x, y, -1, "sand")
-    for x, y in ((10, 4), (14, 5), (13, 7), (11, 6), (10, 5)):
-        s.set(x, y, 0, "sand")
-    # the house, at the front on the right: cobblestone below, oak planks above, a gabled roof, a door and windows
-    # facing the camera (the camera looks from +x, +y; nothing stands in front of it)
-    x0, x1, y0, y1 = 4, 8, 10, 14
-    s.fill(x0, y0, 1, x1, y1, 1, "cobblestone")
-    s.ring(x0, y0, x1, y1, 2, 3, "oak_planks")
-    for x, y in ((x0, y0), (x1, y0), (x0, y1), (x1, y1)):
-        s.fill(x, y, 1, x, y, 3, "oak_log")
-    V.door(s, 6, y1, 2, "+y")
-    V.window(s, x1, 12, 3, "+x")
-    V.window(s, 5, y1, 3, "+y")
-    V.gable_roof(s, x0, x1, y0, y1, 4, "spruce_planks", "oak_planks", axis="x")
-    for (tx, ty), seed in (((4, 3), 1), ((9, 2), 2), ((2, 11), 3)):  # at the back: the pond and house show
-        s.merge(tree("oak", 150.0, seed), tx - 1, ty - 1, 1)
-    names = ("poppy", "dandelion", "cornflower", "allium", "oxeye", "tulip", None, None)
-    for name, (fx, fy) in zip(names, ((10.4, 12.6), (9.3, 8.2), (13.6, 14.4), (7.2, 6.5), (14.5, 8.4), (2.4, 7.6),
-                                      (11.8, 10.8), (6.6, 8.2))):
-        s.plant(fx, fy, 1, flower_sprite(name) if name else grass_sprite(), 12)
-    return s
+SKY_TOP, SKY_LOW = P.hexrgb("#07040e"), P.hexrgb("#4a2244")
+MOON = (400, 330, 210)  # pale and smooth where the game writes its text
+LOGO_W, LOGO_H, LOGO_Y = 600, 170, 6  # the title, at the top
+INK = P.hexrgb("#0a060c")
 
 
-def _over(img: np.ndarray, rgba: np.ndarray, x: int, y: int) -> None:
-    h, w = rgba.shape[:2]
-    region = img[y:y + h, x:x + w]
-    a = rgba[:region.shape[0], :region.shape[1], 3:4]
-    region[...] = rgba[:region.shape[0], :region.shape[1], :3] * a + region * (1 - a)
+def _churchyard(d, k) -> None:
+    """The hill along the foot of the screen and everything on it, as one silhouette."""
+    xs = np.linspace(0, W, 41)
+    ys = 520 - 46 * np.exp(-((xs - 600) / 170) ** 2) - 20 * np.exp(-((xs - 150) / 140) ** 2) + 6 * np.sin(xs / 37)
+    d.polygon([(x * k, y * k) for x, y in zip(xs, ys)] + [(W * k, H * k), (0, H * k)], fill=255)
+    ground = lambda x: float(np.interp(x, xs, ys))
+    N.silhouette_tree(d, 118, ground(118) + 4, 260, k, 9, width=1.5)
+    N.silhouette_tree(d, 742, ground(742) + 4, 150, k, 10)
+    # the house on the hill: a tall gable, a tower with a pointed roof, a crooked chimney
+    hx, hy = 560, ground(600) + 6
+    d.rectangle([hx * k, (hy - 92) * k, (hx + 96) * k, hy * k], fill=255)
+    d.polygon([((hx - 8) * k, (hy - 90) * k), ((hx + 40) * k, (hy - 142) * k), ((hx + 88) * k, (hy - 90) * k)],
+              fill=255)
+    d.rectangle([(hx + 70) * k, (hy - 150) * k, (hx + 110) * k, hy * k], fill=255)
+    d.polygon([((hx + 64) * k, (hy - 148) * k), ((hx + 90) * k, (hy - 214) * k), ((hx + 116) * k, (hy - 148) * k)],
+              fill=255)
+    d.polygon([((hx + 6) * k, (hy - 104) * k), ((hx + 16) * k, (hy - 132) * k), ((hx + 26) * k, (hy - 128) * k),
+               ((hx + 20) * k, (hy - 100) * k)], fill=255)
+    # gravestones and crosses, leaning
+    for x, kind, h, lean in ((236, 0, 30, -0.15), (282, 1, 40, 0.1), (330, 0, 24, 0.2), (378, 1, 34, -0.08),
+                             (430, 0, 28, 0.12), (470, 1, 30, -0.2), (60, 0, 26, 0.1), (196, 1, 26, 0.05)):
+        g = ground(x) + 4
+        if kind == 0:
+            pts = [(-9, 0), (9, 0), (9, -h + 9), (0, -h), (-9, -h + 9)]
+            pts = [(px + (-py) * lean, py) for px, py in pts]
+            d.polygon([((x + px) * k, (g + py) * k) for px, py in pts], fill=255)
+            d.ellipse([(x - 9 + h * lean) * k, (g - h - 1) * k, (x + 9 + h * lean) * k, (g - h + 17) * k], fill=255)
+        else:
+            top = (x + h * lean, g - h)
+            d.line([(x * k, g * k), (top[0] * k, top[1] * k)], fill=255, width=int(5 * k))
+            cy = g - h * 0.72
+            cx = x + h * 0.72 * lean
+            d.line([((cx - 11) * k, (cy + 2 * lean) * k), ((cx + 11) * k, (cy - 2 * lean) * k)], fill=255,
+                   width=int(5 * k))
+    for x in range(300, 520, 9):  # the iron fence before the house
+        g = ground(x) + 2
+        d.rectangle([x * k, (g - 26) * k, (x + 2) * k, g * k], fill=255)
+        d.polygon([((x - 2) * k, (g - 25) * k), ((x + 1) * k, (g - 32) * k), ((x + 4) * k, (g - 25) * k)], fill=255)
+    d.line([(298 * k, (ground(300) - 20) * k), (522 * k, (ground(520) - 20) * k)], fill=255, width=int(2 * k))
+    d.line([(298 * k, (ground(300) - 8) * k), (522 * k, (ground(520) - 8) * k)], fill=255, width=int(2 * k))
+    for x, y, s, f in ((300, 160, 16, 0.3), (350, 190, 11, -0.4), (470, 140, 13, 0.6), (520, 205, 9, 0.0),
+                       (250, 230, 8, -0.2), (660, 120, 10, 0.5)):
+        N.bat(d, x, y, s, k, f)
 
 
 @lru_cache(maxsize=None)
 def picture() -> np.ndarray:
     """The loading screen, RGB 0..1, 800x600."""
-    from .menu import logo
-    from .render import fit_camera, render
-    yy = np.linspace(0, 1, H)[:, None, None]
-    img = np.broadcast_to(SKY_TOP * (1 - yy) + SKY_LOW * yy, (H, W, 3)).copy()
-    img[22:58, 700:736] = (1.0, 0.98, 0.8)  # the square sun
-    img[27:53, 705:731] = (1.0, 1.0, 0.92)
-    rng = np.random.default_rng(7)
-    for _ in range(9):  # flat, blocky clouds: white, so black text shows on them too
-        cx, cy = int(rng.integers(0, W)), int(rng.integers(150, 440))
-        for _ in range(4):
-            bw, bh = int(rng.integers(3, 8)) * 16, int(rng.integers(1, 3)) * 12
-            x, y = cx + int(rng.integers(-3, 4)) * 16, cy + int(rng.integers(-1, 2)) * 12
-            img[max(0, y):y + bh, max(0, x):x + bw] = img[max(0, y):y + bh, max(0, x):x + bw] * 0.2 + 0.8
-    root, heading = island().part(V.all_blocks()), V.BUILDING_HEADING
-    cam = fit_camera(root, heading, scale=1.0, pad=0)
-    cam = fit_camera(root, heading, scale=min(ISLAND[0] / cam.width, ISLAND[1] / cam.height), pad=2)
-    rgba = render(root, heading, camera=cam, shadow=False).to_rgba(1).astype(np.float64) / 255
-    _over(img, rgba, (W - rgba.shape[1]) // 2, H - 6 - rgba.shape[0])
-    mark = logo(LOGO_W)
-    shadow = mark.copy()
-    shadow[..., :3] = 0.05
-    shadow[..., 3] *= 0.6
-    lx, ly = (W - mark.shape[1]) // 2, LOGO_Y
-    _over(img, shadow, lx + 5, ly + 6)
-    _over(img, mark, lx, ly)
+    from . import trinkets as T
+    img = np.zeros((H, W, 3))
+    N.sky(img, top=SKY_TOP, low=SKY_LOW, stars=320, seed=21, horizon=520)
+    N.moon(img, *MOON, colour=(0.98, 0.93, 0.78), seas=0.07)
+    for y, x0, x1, a in ((250, 150, 420, 0.25), (268, 380, 660, 0.2)):  # wisps of cloud
+        m = N.shape(H, W, lambda d, k, y=y, x0=x0, x1=x1: d.ellipse([x0 * k, (y - 4) * k, x1 * k, (y + 4) * k],
+                                                                      fill=255))
+        N.lay(img, N._blur(m, 3) * a, P.hexrgb("#6a4a6a"))
+    N.lay(img, N.shape(H, W, _churchyard), INK)
+    hx, hy = 560, 520 - 46 * math.exp(-((600 - 600) / 170) ** 2) + 6 * math.sin(600 / 37) + 6
+    for x, y, w, h in ((hx + 14, hy - 70, 12, 18), (hx + 50, hy - 70, 12, 18), (hx + 84, hy - 120, 10, 16),
+                       (hx + 36, hy - 112, 9, 12)):  # the house's lit windows
+        N.glow(img, x + w / 2, y + h / 2, 28, P.hexrgb("#ff9a2a"), 0.5)
+        img[int(y):int(y + h), int(x):int(x + w)] = P.hexrgb("#ffc860")
+        img[int(y + h / 2), int(x):int(x + w)] = INK
+        img[int(y):int(y + h), int(x + w / 2)] = INK
+    for seed, cx, foot, h in ((1, 160, 586, 46), (2, 268, 572, 34), (3, 404, 590, 40), (4, 690, 584, 30),
+                              (5, 30, 594, 28)):
+        jack = N.model(T.jack(seed, radius=3.0), height=h)
+        N.glow(img, cx, foot - h / 2, h * 2.0, P.hexrgb("#ff9a2a"), 0.55)
+        N.over(img, jack, int(cx - jack.shape[1] / 2), int(foot - jack.shape[0]))
+    N.fog(img, 540, 600, colour=P.hexrgb("#3a3a5a"), strength=0.35, seed=7)
+    mark = N.title(LOGO_W, LOGO_H)
+    N.over(img, mark, (W - mark.shape[1]) // 2, LOGO_Y)
     return np.clip(img, 0, 1)
 
 

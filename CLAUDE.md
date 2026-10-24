@@ -2,22 +2,24 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Read `HANDOFF.md` first.** It holds the player's setup, how they like to work, and the train crash's cause
-(found 2026-10-10 from Windows' error log).
+**Read `HANDOFF.md` first.** It holds what the player asked for, and points to Age of Minecraft's HANDOFF.md
+(`..\age-of-minecraft`) for the player's setup, how they like to work, and the train crash's cause.
 
 ## What this is
 
 A graphics mod for Age of Empires II: The Conquerors (Gold Edition, UserPatch 1.5) that swaps every unit, building
-and map object for a Minecraft-style sprite. Nothing is hand-drawn and no game or Mojang files are in the repo:
-every sprite is generated from box/voxel models in Python. The mod is built on the player's own PC from their own
-game files. `README.md` has the module-by-module layout table, and `docs/DESIGN.md` has the art rules and the pipeline.
+and map object for a Halloween sprite, smooth and detailed (the player asked for "not pixelated like Minecraft").
+It started as a copy of Age of Minecraft (renamed `aom` -> `aoh`, `age_of_minecraft` -> `age_of_halloween`), whose
+game-file machinery it keeps; the art is new. Nothing is hand-drawn and no game files are in the repo: every sprite
+is generated from models of smooth shapes in Python. The mod is built on the player's own PC from their own game
+files. `README.md` has the module-by-module layout table, and `docs/DESIGN.md` has the art rules and the pipeline.
 
 ## Commands
 
 ```bash
 pip install -r tools/requirements.txt          # numpy (build) + pillow (previews only)
-python tools/tests/test_export.py              # the whole suite, about 25 s
-python tools/concept_sheet.py [out_dir]        # regenerate previews/* (and always docs/UNITS.md)
+python tools/tests/test_export.py              # the whole suite, about 5-6 minutes (the giant is big)
+python tools/cast_sheet.py / town_sheet.py / wilds_sheet.py / style_sheet.py   # previews/*
 python tools/build_mod.py --game <AoE2 folder> [--only militia,archer | buildings,walls,...] [--dry-run]
 ```
 
@@ -37,19 +39,27 @@ Everything lives in `tools/aoh/` as one package. `build_mod.py`, `concept_sheet.
 putting `tools/` on `sys.path`.
 
 **Models → frames (does not need the game).**
-- A unit is a `units.Unit`: a tree of `geometry.Part`s holding textured `Box`es, measured in Minecraft pixels.
-  It names a `rig` and an `attack` style, which `animation.pose(unit, action, t)` turns into part rotations.
-- The group modules (`units.FOOT`, `mounted.MOUNTED`, `siege.SIEGE`, `ships.SHIPS`, `animals.ANIMALS`,
-  `easter.EASTER`) are dicts of key → builder. They merge into `roster.ROSTER`. That key is the same one used by
-  `--only`, `slpmap.Target.unit` and `docs/UNITS.md`.
-- Buildings and scenery are `voxel.Structure`s on an integer block grid, with textures from `blocks.py` and
-  materials from `styles.py` (per style letter and age). Each set builds in its own way (`architecture.py`:
-  `ground`, `hall`, `door`, `tower`, `shed`), so the sets differ in shape; the shared Dark Age look (style G) is
-  the `_dark_*` builders in `structures.py`. `props.render_static(spec, …)` builds and renders them.
-  The spec's `mode` (variants / anim / facing / pieces / overlay) says how the original SLP's frames are organised.
-- `render.py` is an orthographic ray-caster from AoE2's camera. It outputs palette-agnostic `Frame`s whose pixels
-  each have a *kind* (TRANSPARENT, SOLID, PLAYER, SHADOW, OUTLINE). `palette.Quantiser` maps them to the game's
-  palette indices and player-colour ranges, and `slp.encode` writes SLP 2.0N.
+- A unit is a `units.Unit`: a tree of `geometry.Part`s whose `boxes` hold `sculpt.Shape`s (Ellipsoid, Frustum,
+  Lathe, Convex; `ball`, `rod`, `limb`, `turned`, `block`, `hull`, `torus`; `Shape.clip` cuts with planes) with
+  `paint.py` materials. It names a `rig` and an `attack` style, which `animation.pose(unit, action, t)` turns into
+  part rotations (the old rigs' part names, so the Minecraft rigs move the new models).
+- The Halloween group modules (`infantry.FOOT`, `cavalry.MOUNTED`, `engines.SIEGE`, `ghostships.SHIPS`,
+  `beasts.ANIMALS`, `beasts.EASTER`, `pumpkins.pacman`) are dicts of key → builder under the Minecraft modules'
+  keys; they merge into `roster.ROSTER` over the old ones (`units.FOOT` ...), which stay for their sizes and a few
+  tests. That key is the one used by `--only`, `slpmap.Target.unit` and `docs/UNITS.md`. Bodies come from
+  `creatures.body` + `Gear`.
+- Buildings and scenery are Parts too: `haunted.kit(style, age)` gives each culture's materials and manners (G Dark
+  Age, W Victorian, E Transylvanian, M mummy tombs, F ghost lanterns, X Day of the Dead), `estates.py` the
+  buildings, `fortress.py` walls/gates/towers/castles, `marvels.py` wonders, `wilds.py` trees, mines, decorations
+  and projectiles. `props.build()` routes each spec to them (`HALLOWEEN_BUILDINGS`, `HALLOWEEN_TREES`); the
+  spec's `mode` (variants / anim / facing / pieces / overlay) says how the original SLP's frames are organised.
+  Footprints: 1 tile 48 units, 2x2 80, 3x3 128, 4x4 176, 5x5 224; model +x/+y face the camera.
+- `sculpt.render` is an orthographic ray tracer from AoE2's camera (3x3 samples, 2x2 above 500k pixels; ink lines
+  on depth edges; the "darker and creepier" light: `KEY_RGB`, `SKY`, `RIM`, `MUTE`, `GRIME`; `Material.vivid`
+  keeps a material's colour, `glow` makes it shine). A model of old boxes only goes to `render.py`. Both output
+  palette-agnostic `Frame`s whose pixels each have a *kind* (TRANSPARENT, SOLID, PLAYER, SHADOW, OUTLINE).
+  `palette.Quantiser` maps them to the game's palette indices and player-colour ranges, and `slp.encode` writes
+  SLP 2.0N.
 
 **Game files → mod (`build_mod.main`).**
 1. `Game` opens the player's DRS archives (the patch archives take precedence), the palette (`interfac.drs` 50500),
@@ -68,27 +78,31 @@ putting `tools/` on `sys.path`.
      game's dark amount box ending 69 px after it); each item fills a 16x16 square, and a flat near-black box
      (`BOX`, 17-71 from the icon) holds the amount, which the game writes right-aligned, ending at icon + 66.
      UserPatch draws its own food icon (`interface.FOOD`, 53010, a steak on black) over the bar's; `food_icon`
-     makes it the bar's meat at the same place, the rest clear.
+     makes it the bar's pumpkin at the same place, the rest clear. The icons are sculpt models (`interface.ICONS`),
+     the frames weathered planks (`nightscape.boards`), the parchment a bone-pale panel (`GUI`).
    - The main menu (`interfac.drs` 50189) is redrawn by `menu.py`: a new 800x600 picture, and each button's
      pictures cut from it at the original places (`menu.BUTTONS`), with the original's glow colour. Only a menu
-     with exactly the known picture sizes (`menu.known`) is replaced. Names sit on Minecraft buttons drawn where a
-     screenshot showed the game writes them (`menu.SIGNS`); hovered things darken (`DARKER`, no glow). The menu
+     with exactly the known picture sizes (`menu.known`) is replaced. The picture is a churchyard at night
+     (`nightscape.py`: sky, moon, hills, mist, stones, planks, the title in a Windows font), each button a sculpt
+     model (`trinkets.py`) placed by `menu._place`, whose mask is what the button pictures cut. Names sit on boards
+     of dark planks drawn where a screenshot showed the game writes them (`menu.SIGNS`); hovered things darken
+     (`DARKER`, no glow). The menu
      palette 50589 (used by 50089/50090 only) is replaced (`menu.palette`, `build_mod.menu_palette`); the menu, its
      dialogue 50190 (`screens.encode(..., out=)`) and its icons 50688 (a "recolour" job) are drawn for it, and
-     `menu_settings` gives the screen files Minecraft buttons (`menu.settings`: `background_color` is the fill of
-     the game's own buttons, 0 = none; bevel colours, white/yellow text).
+     `menu_settings` gives the screen files dark purple buttons (`menu.settings`: `background_color` is the fill of
+     the game's own buttons, 0 = none; bevel colours, white text, pumpkin orange under the mouse).
    - The other screens (`screens.RESTYLED`: setup screens, dialogues, history, achievements, loading screen 50163) are
      found through the screen files (`screens.read`, `Game.screens`) and redrawn by `screens.hall`: parchment
      (`screens.sheets`) becomes a window in a middle grey (`screens.WINDOWS`: white, cream, black and player colours
-     all readable); everything around it one material, deepslate or dark oak (`WOODEN`), never mixed (the player
-     asked for that); the achievements and timeline are the dark window. `screens.quantise` picks
+     all readable); everything around it one material, dark stone blocks or planks (`WOODEN`, `MATERIALS`), never
+     mixed (the player asked for that); the achievements and timeline are the dark window. `screens.quantise` picks
      colours good in every palette a picture is shown in; `LAYOUTS` gives the sheets of a few pictures by hand.
      Pictures without parchment are one solid colour (the game writes scores in player colours on them). The
      achievements' flags (`screens.FLAGS`, no screen file names them: `SHOWN_WITH` gives the achievements' palette)
-     become banners coloured from each flag's own pixels, as that palette lacks Minecraft's wool colours. Its tabs
+     become cloth banners coloured from each flag's own pixels (that palette has few plain colours). Its tabs
      (`TABS`, 12 pictures: each tab not chosen / chosen, told apart by the dark edge at their top) lose their top
      rows, which ran under the Play Again and Main Menu buttons; the team marks (`TEAMS`: teams 1-4, then the small
-     "no team" one; the game writes the number in each shield's dark middle) become Minecraft shields in each team's
+     "no team" one; the game writes the number in each shield's dark middle) become shields in each team's
      pattern (`TEAM_PATTERNS`) with that middle kept dark, and `team_copies` redraws copies and near copies (85% of
      pixels) in any archive (the report's TEAM MARKS section lists every archive holding them).
    - The mod's XML points UserPatch at the game's own strings: `langId` 10230 (civ names, Britons 10231),
@@ -124,7 +138,8 @@ putting `tools/` on `sys.path`.
      (`fireball_slp`), its texts by `name_dragon`.
    - `lava.py` makes terrain 15 ("Old Water": no texture of its own, drawn as the Water, passable as water) lava, in
      place: its own texture (the Water's tile shapes, cut by `farmland.cut`), minimap colour and the Water's blending;
-     the Docks' placement terrains (Water, Shallows) become (Water, lava). Its map, `Team Lava Islands.rms` (written
+     the Docks' placement terrains (Water, Shallows) become (Water, lava). Here the lava is green witch's brew (`lava_texture`, `MINIMAP`, the green and yellow player
+     shades as plain colours). Its map, `Witch Brew Islands.rms` (written
      from scratch, `lava.script`), goes into the mod's `Script.RM` (`write_map`), or in direct mode the game's
      `Random`, which `restore` empties of it (only a file carrying `lava.MARK`). `--only lava` builds just this.
    - `rails.py` makes the Trade Cart (128, 204) a train that lays its own rails, in place: it keeps its terrain
@@ -137,7 +152,8 @@ putting `tools/` on `sys.path`.
      game files ground pieces in a 60-slot one-second wheel and writes past it for longer ones (004d5b03), corrupting
      memory; the four builds whose pieces lasted a day, then 5 minutes, crashed so. The train is drawn
      `TRAIN_SCALE` big, the track as wide (`GAUGE`); its texts by `name_train`. `--only rails` builds just this.
-   - `volcano.py` makes the never-built Sea Tower (785, still a tower: class 52, so tower upgrades reach it) the
+   - `volcano.py` (here the witch's cauldron: `TEXTS`, `volcano()`; the code keeps the volcano's names) makes the
+     never-built Sea Tower (785, still a tower: class 52, so tower upgrades reach it) the
      volcano, in place: built by Villagers (118, button 5 on the military page: the page is the interface kind, 2 economic, 10 military;
      a button 14 did not show) on the Dock's placement rules (side terrains, row, hill
      mode, copied from the unit named DOCK) with placement terrain 15, lava under its middle, 3x3. Fishing Ships cannot

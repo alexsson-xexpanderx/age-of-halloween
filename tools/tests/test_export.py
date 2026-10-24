@@ -704,19 +704,19 @@ def test_full_build(tmp: Path):
     assert langdll.read_string((game / "language_x1.dll").read_bytes(), 5860) == "Furious the Monkey Boy"
     assert not (mod / "Data" / "language_x1.dll").exists()
     assert "'Furious the Monkey Boy' is now 'Pac-Man'" in report
-    # the icon for the shortcut, and the main menu's pictures to draw a Minecraft menu over
+    # the icon for the shortcut, and the main menu's pictures to draw the Halloween menu over
     ico = (mod / "age_of_halloween.ico").read_bytes()
     assert ico[:4] == b"\0\0\1\0" and struct.unpack_from("<H", ico, 4)[0] == 7
     assert (mod / "menu_originals" / "50189_00.png").read_bytes()[:4] == b"\x89PNG"
     assert "menu pictures: 50189: 53 pictures" in report
-    # the other screens' pictures, to draw Minecraft ones over: the setup screen's, and the loading screen
+    # the other screens' pictures, to draw Halloween ones over: the setup screen's, and the loading screen
     saved = sorted(p.name for p in (mod / "screen_originals").iterdir())
     assert saved == (["50100_00.png", "50101_00.png", "50149_00.png", "50163_00.png"]
                      + [f"50762_0{k}.png" for k in range(8)] + [f"50765_{k:02d}.png" for k in range(12)]
                      + [f"50769_0{k}.png" for k in range(5)])
     assert "  50053  50100 (800x600), 50101 (1024x768); palette 50532" in report
     assert "text_color1 255 255 255" in report and "  50061  50149 (640x480); palette 50531" in report
-    # the screens in the Minecraft style: the parchment is the inventory's grey, the loading screen dirt
+    # the screens in the Halloween style: the parchment is a middle purple-grey window
     from aoh import screens
     ui_before = Drs(game / "Data" / "interfac.drs")
     flags_before = slp.decode(ui_before.get(50762))
@@ -724,11 +724,12 @@ def test_full_build(tmp: Path):
         a, b = slp.decode(ui_before.get(sid)), slp.decode(out.get(sid))
         assert len(a) == len(b) == 1 and a[0].pixels.shape == b[0].pixels.shape
         assert not np.array_equal(a[0].pixels, b[0].pixels)
-    grey = screens.quantise(np.full((1, 1, 3), 107 / 255), [parse_jasc(fake_palette())])[0, 0]
+    mid = np.array([[[int(screens.WINDOWS['mid'][0][i:i + 2], 16) / 255 for i in (1, 3, 5)]]])
+    grey = screens.quantise(mid, [parse_jasc(fake_palette())])[0, 0]
     assert slp.decode(out.get(50100))[0].pixels[300, 200] == grey
     assert out.get(50149) is None and out.get(50700) is None  # a picture it doesn't know, and an icon
     assert "screen picture 50149 is not the one this build knows" in report
-    assert "   50163  800x600   Minecraft style" in report
+    assert "   50163  800x600   Halloween style" in report
     # the loading screen: a title screen in a palette of its own, the Windows colours kept where they were
     from aoh.palette import parse_jasc as read_palette
     old_pal, new_pal = read_palette(fake_palette()), read_palette(out.get(50563, "bina"))
@@ -736,7 +737,7 @@ def test_full_build(tmp: Path):
     assert np.array_equal(new_pal[:10], old_pal[:10]) and np.array_equal(new_pal[246:], old_pal[246:])
     loading = slp.decode(out.get(50163))[0].pixels
     assert loading.min() >= 10 and loading.max() <= 245 and len(np.unique(loading)) > 150
-    assert "loading screen: a Minecraft title screen, with its own palette 50563" in report
+    assert "loading screen: a Halloween title card, with its own palette 50563" in report
     banners = slp.decode(out.get(50762))  # the flags: banners a bit bigger, with a dark stripe for the name
     up, down, wider = screens.BANNER_GROW
     assert [f.pixels.shape for f in banners] == [(a + up + down, b + wider) for a, b in
@@ -749,7 +750,7 @@ def test_full_build(tmp: Path):
             lum = ach[px[row, 20:120]] @ [0.299, 0.587, 0.114]
             assert (px[row, 20:120] >= 0).all() and 70 < lum.mean() < 150
         assert (px[38 + up + 12:, 10:] == slp.TRANSPARENT).all()  # no shadow under it
-    tabs = slp.decode(out.get(50765))  # Minecraft tabs: their top rows (under the buttons) left out
+    tabs = slp.decode(out.get(50765))  # the tabs: their top rows (under the buttons) left out
     assert len(tabs) == 12 and all((f.pixels[:14] == slp.TRANSPARENT).all() for f in tabs)
     assert all((tabs[k].pixels[17:20, 40] >= 0).all() for k in range(1, 12, 2))  # a chosen one opens upwards
     assert all((tabs[k].pixels[17:20, 40] == slp.TRANSPARENT).all() for k in range(0, 12, 2))
@@ -797,7 +798,7 @@ def test_full_build(tmp: Path):
     assert slp.info(out.get(5157)).num_frames == 85  # the javelina, from gamedata_x1.drs: replaced too
     assert out.get(5157) != Drs(game / "Data" / "gamedata_x1.drs").get(5157)
     assert "6 x 8 angles mirrored  [dat, plus 2 unused frames]" in report
-    # farms are terrain: their textures in terrain.drs become Minecraft farmland, in the same tile shapes
+    # farms are terrain: their textures in terrain.drs become pumpkin patches, in the same tile shapes
     ground, ground_before = out, Drs(game / "Data" / "terrain.drs")
     assert ground.get(15000) is None  # grass stays
     for slp_id in (15004, 15005, 15021, 15040, 15023):
@@ -810,17 +811,19 @@ def test_full_build(tmp: Path):
     overlap = (ripe[24:, 48:] >= 0) & (ripe[:25, :49] >= 0)  # the tile to the lower right lies over this corner
     assert np.array_equal(ripe[24:, 48:][overlap], ripe[:25, :49][overlap])  # so the tiles join up
     assert "FARMS" in report and "terrain 30 'Farm 2'" in report and "TERRAIN TABLE" in report
-    # the panels: planks, inventory grey and slots, with Minecraft resource icons; the game view stays open
+    # the panels: planks, a bone-pale panel and slots, with the resource icons; the game view stays open
     ui, ui_before = out, Drs(game / "Data" / "interfac.drs")
     quant = Quantiser(parse_jasc(fake_palette()))
     new, old = slp.decode(ui.get(51141))[0].pixels, slp.decode(ui_before.get(51141))[0].pixels
     assert new.shape == old.shape and np.array_equal(new < 0, old < 0)
-    grey = quant.indices(np.array([[198, 198, 198]]))[0]
-    assert new[900, 600] == grey  # parchment -> inventory grey
+    from aoh import interface
+    gui = {k: np.array([[int(v[i:i + 2], 16) for i in (1, 3, 5)]]) for k, v in interface.GUI.items()}
+    grey = quant.indices(gui["panel"])[0]
+    assert new[900, 600] == grey  # parchment -> the bone-pale panel
     assert new[806 + 21, 400] == grey and new[806 + 30, 650] == grey  # its shaded border and the tear, too
-    assert new[900, 1100] == quant.indices(np.array([[139, 139, 139]]))[0]  # the minimap's dark -> a slot
-    assert not np.array_equal(new[10:27, 8:34], old[10:27, 8:34])  # a Minecraft log for wood
-    box = quant.indices(np.array([[30, 30, 30]]))[0]
+    assert new[900, 1100] == quant.indices(gui["slot"])[0]  # the minimap's dark -> a slot
+    assert not np.array_equal(new[10:27, 8:34], old[10:27, 8:34])  # a log for wood
+    box = quant.indices(gui["count"])[0]
     for x in (8 + 77 * k for k in range(5)):  # each amount's box: flat, nearly black, no shading, all alike
         assert (new[10:27, x + 17:x + 71] == box).all() and (new[10:27, x + 15:x + 17] != box).all()
     steak = slp.decode(ui.get(53010))  # UserPatch's food icon, drawn over the bar's: the bar's, the rest clear
@@ -831,23 +834,23 @@ def test_full_build(tmp: Path):
     assert np.array_equal(new < 0, old < 0) and not np.array_equal(new[4:21, 8:26], old[4:21, 8:26])
     assert (new[4:21, 25:79] == box).all()
     assert ui.get(51101) is None  # its bar is not the known one: it keeps its look
-    assert "INTERFACE PANELS" in report and "Minecraft style" in report and "is not the one this build knows" in report
-    menu_before, menu_after = slp.decode(ui_before.get(50189)), slp.decode(ui.get(50189))  # the Minecraft menu
+    assert "INTERFACE PANELS" in report and "Halloween style" in report and "is not the one this build knows" in report
+    menu_before, menu_after = slp.decode(ui_before.get(50189)), slp.decode(ui.get(50189))  # the Halloween menu
     assert len(menu_after) == 53 and not np.array_equal(menu_after[0].pixels, menu_before[0].pixels)
     assert all(a.pixels.shape == b.pixels.shape and a.hotspot == b.hotspot for a, b in zip(menu_after, menu_before))
-    # the menu's own palette (the first had no greens), Windows colours kept; the game's buttons Minecraft grey
+    # the menu's own palette, Windows colours kept; the game's buttons dark purple, pumpkin orange under the mouse
     new_pal, old_pal = parse_jasc(ui.get(50589, "bina")), parse_jasc(fake_palette())
     assert not np.array_equal(new_pal, old_pal)
     assert np.array_equal(new_pal[:10], old_pal[:10]) and np.array_equal(new_pal[246:], old_pal[246:])
-    assert (np.abs(new_pal - [111, 163, 71]).sum(1) < 40).any()  # a grass green
+    assert (np.abs(new_pal - [230, 120, 30]).sum(1) < 60).any()  # a pumpkin orange
     from aoh import screens
     conf = screens.parse(ui.get(50089, "bina"))
     fill = int(conf["background_color"][0])
-    assert 10 <= fill < 246 and np.abs(new_pal[fill] - [94, 94, 94]).sum() < 30
+    assert 10 <= fill < 246 and np.abs(new_pal[fill] - [46, 34, 54]).sum() < 30
     assert len(conf["bevel_colors"]) == 6 and new_pal[int(conf["bevel_colors"][0])].sum() < 40
-    assert conf["text_color1"] == ["255", "255", "255"] and conf["focus_color1"] == ["255", "255", "160"]
-    frame0 = menu_after[0].pixels  # drawn in the new palette: the sky is blue
-    assert new_pal[frame0[5, 200]][2] > new_pal[frame0[5, 200]][0] + 60
+    assert conf["text_color1"] == ["255", "255", "255"] and conf["focus_color1"] == ["255", "176", "64"]
+    frame0 = menu_after[0].pixels  # drawn in the new palette: the night sky is dark
+    assert new_pal[frame0[5, 200]].sum() < 120
     assert (menu_after[10].pixels < 0).mean() > 0.1 and (menu_after[11].pixels >= 0).all()
     assert not (game / "Data" / ("graphics.drs" + build_mod.BACKUP)).exists()
 
@@ -926,8 +929,8 @@ def test_exe_icon():
 
 
 def test_screens():
-    """A parchment dialogue becomes a straight Minecraft window: its tears filled, its ornament painted over, its
-    plaque and frame kept apart, in the inventory's grey; quantising looks for colours good in every palette."""
+    """A parchment dialogue becomes a straight window: its tears filled, its ornament painted over, its plaque and
+    frame kept apart, in a middle purple-grey; quantising looks for colours good in every palette."""
     from aoh import screens
     h, w = 300, 400
     rgb = np.zeros((h, w, 3))
@@ -942,10 +945,12 @@ def test_screens():
     assert paper[20:h - 14, 14:140].all() and paper[50:h - 14, 140:260].all()  # the tears and the ornament: gone
     assert not paper[:8].any() and not paper[14:46, 144:256].any()  # the frame and the plaque stay apart
     out = screens.hall(rgb, opaque)
-    assert np.allclose(out[150, 200], 107 / 255, atol=0.01)  # a middle grey: white and black text both show
+    mid = [int(screens.WINDOWS["mid"][0][i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    assert np.allclose(out[150, 200], mid, atol=0.01)  # a middle grey: white and black text both show
     assert (out[25, 200] @ screens.LUMA) < 0.4  # the plaque: dark planks, so the game's white title stays readable
     dark = screens.hall(np.random.default_rng(1).uniform(0.05, 0.6, (60, 80, 3)) * (0.3, 0.5, 0.8), np.ones((60, 80), bool))
-    assert np.allclose(dark, 55 / 255)  # no parchment: one solid dark grey, so light text and player colours show
+    solid = [int(screens.SOLID[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    assert np.allclose(dark, solid)  # no parchment: one solid dark colour, so light text and player colours show
     ramp = np.stack([np.arange(256)] * 3, -1)  # a picture made for a grey ramp, also listed with a scrambled one
     scrambled = ramp[np.random.default_rng(2).permutation(256)]
     px = np.tile(np.arange(40, 200), (30, 1)).astype(np.int16)

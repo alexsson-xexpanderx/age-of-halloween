@@ -1,4 +1,4 @@
-"""The game's other screens (game setup, history, the dialogues, the loading screen), Minecraft style.
+"""The game's other screens (game setup, history, the dialogues, the loading screen), Halloween style.
 
 Each screen is described by a small text file in interfac.drs (a "bina" entry, 50001-50099 in the Conquerors)
 with one setting per line: its background pictures for 800x600, 1024x768 and 1280x1024 ("background1_files" to
@@ -8,12 +8,13 @@ with one setting per line: its background pictures for 800x600, 1024x768 and 128
 the screen files in the report.
 
 Almost every screen is a parchment the game writes on, in white, in cream with a black shadow, in black or in the
-players' colours. The "deepslate hall" makes each sheet a Minecraft window (straight edges: its tears filled, what
-sticks out cut off; Minecraft's bevel) in a middle grey on which all of those can be read (`WINDOWS`), and
-everything around it one material: deepslate tiles, or dark oak planks for the pictures in WOODEN. The
-achievements are a dark window, their flags Minecraft banners with a black stripe for the names, their tabs
-Minecraft tabs and their team marks numbered shields. Pictures without parchment (the dark dialogue backgrounds)
-are one solid dark grey, a wooden board solid dark oak. The loading screen is loadscreen.py's.
+players' colours. The "crypt" makes each sheet a window (straight edges: its tears filled, what sticks out cut
+off; a light and a dark edge) in a middle purple-grey on which all of those can be read (`WINDOWS`), and everything
+around it one material: dark old stone blocks, or weathered planks for the pictures in WOODEN (the player asked, for
+Age of Minecraft, never to mix the two). The achievements are a dark window, their flags cloth banners with a grey
+stripe for the names, their tabs plain tabs and their team marks numbered shields. Pictures without parchment (the
+dark dialogue backgrounds) are one solid dark colour, a wooden board solid dark wood. The loading screen is
+loadscreen.py's.
 
 Each picture is drawn in every palette the game shows it in (`quantise`), and only the pictures in RESTYLED, at
 those sizes, are changed.
@@ -21,13 +22,15 @@ those sizes, are changed.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Callable, Optional
 
 import numpy as np
 
 from . import interface as I
+from . import nightscape as N
+from . import paint as P
 from . import slp
-from . import voxel as V
 from .palette import _lab
 from .textures import parse as colour
 
@@ -61,16 +64,17 @@ LAYOUTS = {  # sheets that are given, not found: (x0, y0, x1, y1) on the picture
     # suits both); the tabs sit on the (wooden) table under it
     50763: {"window": "dark"},  # the timeline's background
 }
-# one material around the windows of a picture: deepslate, or dark oak for these (the campaigns' dialogues, and the
-# achievements, whose dark tabs would be lost on deepslate)
+# one material around the windows of a picture: stone, or planks for these (the campaigns' dialogues, and the
+# achievements, whose dark tabs would be lost on the stone)
 WOODEN = {53161, 53162, 53163, 53164, 53171, 53172, 53173, 53174, 50149}
 LUMA = I.LUMA
-PAPER, DARK = 0.38, 0.45  # parchment is lighter than PAPER; a picture darker than DARK on average is all deepslate
-STONE, WOOD = 0.3, 0.24  # how light the deepslate and the planks are
+PAPER, DARK = 0.38, 0.45  # parchment is lighter than PAPER; a picture darker than DARK on average is all stone
+STONE, WOOD = 0.22, 0.2  # how light the stone and the planks are
+MATERIALS = {"stone": ("#4a4252", "#0e0a12"), "wood": ("#5a463c", "#16100e")}  # light and dark of each
 # the windows: (fill, light edge, dark edge). The game writes in white, cream, black and the players' colours: all
 # of them can be read on the middle grey; the dark one is for the achievements (white, cream and player colours)
-WINDOWS = {"mid": ("#6b6b6b", "#9a9a9a", "#3a3a3a"), "dark": ("#373737", "#5c5c5c", "#1c1c1c"),
-           "light": ("#b4b4b4", "#e0e0e0", "#5a5a5a")}
+WINDOWS = {"mid": ("#6a6272", "#9a90a6", "#38303e"), "dark": ("#38323e", "#5e5468", "#1c1820"),
+           "light": ("#b6aebe", "#e2dae8", "#5a5262")}
 SOLID = WINDOWS["dark"][0]  # a picture without parchment (the dark dialogue backgrounds)
 
 
@@ -211,7 +215,7 @@ def _fill_holes(m: np.ndarray, max_area: float) -> np.ndarray:
 
 
 def _rectangle(paper: np.ndarray, opaque: np.ndarray, notch: int = 12) -> np.ndarray:
-    """The parchment as a Minecraft window: a rectangle with straight edges where most of its edge is (the tears
+    """The parchment as a window: a rectangle with straight edges where most of its edge is (the tears
     filled, what sticks out cut off), minus the big things inside it that aren't parchment (a crate, a plaque)."""
     if not paper.any():
         return paper
@@ -255,16 +259,22 @@ def sheets(rgb: np.ndarray, opaque: np.ndarray, sid: int = 0) -> np.ndarray:
 
 # --------------------------------------------------------------------------- painting
 
-def _tiled(name: str, shape: tuple[int, int], brightness: float) -> np.ndarray:
-    """A block's texture over a whole picture, 2 screen pixels to a texel, as light as `brightness`."""
-    tex = V.all_blocks()[name].faces["front"][..., :3].astype(np.float64)
-    big = tex.repeat(I.PIXEL, 0).repeat(I.PIXEL, 1)
-    reps = (shape[0] // big.shape[0] + 1, shape[1] // big.shape[1] + 1, 1)
-    return np.clip(np.tile(big, reps)[:shape[0], :shape[1]] * brightness / (tex @ LUMA).mean(), 0, 1)
+@lru_cache(maxsize=16)
+def _texture(kind: str, shape: tuple[int, int]) -> np.ndarray:
+    base, dark = (P.hexrgb(c) for c in MATERIALS[kind])
+    if kind == "stone":
+        return N.stones(shape[0], shape[1], base, dark, bw=44, bh=24, seed=7, moss=0.25)
+    return N.boards(shape[0], shape[1], base, dark, bw=18, seed=8, across=True)
+
+
+def _tiled(kind: str, shape: tuple[int, int], brightness: float) -> np.ndarray:
+    """Stone blocks or planks over a whole picture, as light as `brightness` on average."""
+    tex = _texture(kind, tuple(shape))
+    return np.clip(tex * brightness / max(1e-3, float((tex @ LUMA).mean())), 0, 1)
 
 
 def hall(rgb: np.ndarray, opaque: np.ndarray, sid: int = 0) -> np.ndarray:
-    """A screen picture (RGB 0..1) as the deepslate hall; every pixel keeps its place, transparency stays."""
+    """A screen picture (RGB 0..1) as the crypt; every pixel keeps its place, transparency stays."""
     lum = rgb @ LUMA
     paper = sheets(rgb, opaque, sid)
     rest = opaque & ~paper
@@ -273,12 +283,12 @@ def hall(rgb: np.ndarray, opaque: np.ndarray, sid: int = 0) -> np.ndarray:
     wood = rest & ~shadow & (_blur(warm, 3, rest) > 0.5)
     out = rgb.copy()
     if not paper.any():  # no parchment: the game writes straight on it, so one solid colour
-        tex = V.all_blocks()["dark_oak_planks"].faces["front"][..., :3].reshape(-1, 3).mean(0)
+        tex = _texture("wood", (16, 64)).reshape(-1, 3).mean(0)
         board = wood.sum() > 0.5 * rest.sum()  # a wooden board
         out[rest & ~shadow] = tex * WOOD / (tex @ LUMA) if board else colour(SOLID)[:3]
         return out
     border = rest & ~shadow  # all of it one material: a mix of stone and wood doesn't look right
-    material = ("dark_oak_planks", WOOD) if sid in WOODEN else ("deepslate_tiles", STONE)
+    material = ("wood", WOOD) if sid in WOODEN else ("stone", STONE)
     out[border] = _tiled(material[0], opaque.shape, material[1])[border]
     lay = LAYOUTS.get(sid, {})
     whole = paper.all() or (opaque.all() and paper.mean() > 0.97)
@@ -304,11 +314,11 @@ STRIPE = 0.44  # the stripe the name is written on: the game writes it in white,
 
 
 def banner(rgb: np.ndarray, opaque: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """A flag (RGB 0..1, and where it is drawn) as a Minecraft banner, BANNER_GROW bigger than the original (its
-    hotspot moves down with it, so it stays centred on the name): wool in the flag's own colours (they are in its
-    palette) on a dark oak pole, its end cut like a swallowtail, and across it, where the game writes the player's
-    name, a grey stripe (Minecraft's "fess" pattern) with room for a long name on two lines. The game writes the
-    name in white, in black or in the player's colour: a middle grey is the one stripe all three show on."""
+    """A flag (RGB 0..1, and where it is drawn) as a cloth banner, BANNER_GROW bigger than the original (its
+    hotspot moves down with it, so it stays centred on the name): cloth in the flag's own colours (they are in its
+    palette), hanging in soft folds from a dark wooden pole, its end cut like a swallowtail, and across it, where the
+    game writes the player's name, a grey stripe with room for a long name on two lines. The game writes the name in
+    white, in black or in the player's colour: a middle grey is the one stripe all three show on."""
     h0, w0 = opaque.shape
     rows = np.nonzero(opaque.mean(1) > 0.6)[0]  # the original's cloth, not the shadow under it
     top0, bottom0 = (int(rows.min()), int(rows.max()) + 1) if len(rows) else (4, h0 - 6)
@@ -324,24 +334,22 @@ def banner(rgb: np.ndarray, opaque: np.ndarray) -> tuple[np.ndarray, np.ndarray]
     top, bottom = top0 + up - 5, bottom0 + up + 5  # the cloth, 10 pixels taller than the flag's
     mid = (top + bottom) // 2
     ys, xs = np.mgrid[0:h, 0:w]
-    wool = V.all_blocks()["white_wool"].faces["front"][..., :3] @ LUMA
-    shade = (wool - wool.min()) / max(1e-6, np.ptp(wool))  # the wool's weave, 0..1
-    shade = np.tile(shade.repeat(I.PIXEL, 0).repeat(I.PIXEL, 1), (h // (16 * I.PIXEL) + 1, w // (16 * I.PIXEL) + 1))
-    out = ramp[((0.35 + 0.35 * shade[:h, :w]) * (len(ramp) - 1)).astype(int)]  # its middle tones, not the folds
+    folds = np.sin(xs / max(1, w) * np.pi * 3.0) ** 2 * 0.7 + N.field(h, w, 3.0, 9, 2) * 0.3  # soft folds, 0..1
+    out = ramp[((0.3 + 0.4 * folds) * (len(ramp) - 1)).astype(int)]  # its middle tones
     stripe = (ys >= top + 5) & (ys < bottom - 5)
-    grey = _tiled("gray_wool", (h, w), STRIPE)
-    out[stripe] = (STRIPE + (grey - STRIPE) * 0.35)[stripe]  # gray wool, its weave faint so the name stays clear
+    grey = STRIPE + (N.field(h, w, 2.0, 10, 2) - 0.5) * 0.05
+    out[stripe] = np.repeat(grey[..., None], 3, -1)[stripe]  # grey cloth, its weave faint so the name stays clear
     cloth = (ys >= top) & (ys < bottom) & (xs >= 6) & (xs < w - 1)
     cloth &= ~(w - 1 - xs < (bottom - top) // 2 - np.abs(ys - mid) * 0.9)  # the swallowtail cut
     out[cloth & ~I._shrink(cloth, 1)] = 0.05
     pole = (xs < 6) & (ys >= max(0, top - 4)) & (ys < min(h, bottom + 6))
-    out[pole] = _tiled("dark_oak_log", (h, w), 0.2)[pole]
+    out[pole] = _tiled("wood", (h, w), 0.2)[pole]
     out[pole & ((xs == 0) | (xs == 5))] = 0.05
     return out, cloth | pole
 
 
 def tab(rgb: np.ndarray, opaque: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """An achievements tab as a Minecraft tab (RGB 0..1, and where it is drawn), the size of the original. Its top
+    """An achievements tab as a plain tab (RGB 0..1, and where it is drawn), the size of the original. Its top
     rows carry on the sheet above it, under the Play Again and Main Menu buttons: those are left out, so the tab
     no longer runs into them. A chosen tab (no dark edge at its top) is the dark window's grey and opens into the
     window; the others are darker, each a button on the wooden floor, with a gap between them."""
@@ -352,7 +360,7 @@ def tab(rgb: np.ndarray, opaque: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     top = 16 if chosen else 20
     ys, xs = np.mgrid[0:h, 0:w]
     body = (ys >= top) & (xs >= 2) & (xs < w - 2)
-    fill, light, shade = WINDOWS["dark"] if chosen else ("#262626", "#474747", "#141414")
+    fill, light, shade = WINDOWS["dark"] if chosen else ("#28222e", "#4a4252", "#141018")
     out = np.zeros((h, w, 3))
     out[body] = colour(fill)[:3]
     ring = body & ~I._shrink(body, 1)
@@ -366,26 +374,27 @@ def tab(rgb: np.ndarray, opaque: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 
 # the teams' shields, as the game's own: white; white and red side by side; a white top over red and black; and
-# quartered white and red. W white, R red, B black wool
+# quartered white and red. W bone white, R blood red, B black
 TEAM_PATTERNS = ("W", "WR", "T", "Q")
-WOOL = {"W": "#e9ecec", "R": "#a02722", "B": "#1d1d21"}
+WOOL = {"W": "#e2d6b8", "R": "#8a1a14", "B": "#1a141c"}
 
 
 def _shield(w: int, h: int, x0: int, y0: int, x1: int, y1: int, straight: float = 0.45) -> np.ndarray:
-    """A shield shape in whole 2-pixel blocks: straight sides (the top `straight` of it), then narrowing to a point
-    at the bottom. Kept a pixel inside the picture, so its edge shows all round."""
+    """A shield shape: straight sides (the top `straight` of it), then curving in to a point at the bottom. Kept a
+    pixel inside the picture, so its edge shows all round."""
     x0, y0, x1, y1 = max(x0, 1), max(y0, 1), min(x1, w - 1), min(y1, h - 1)
     ys, xs = np.mgrid[0:h, 0:w]
-    u, v = (xs - x0) // 2, (ys - y0) // 2
-    bw, bh = (x1 - x0) // 2, (y1 - y0) // 2
-    point = np.maximum(0, v - bh * straight) * (bw / 2) / max(1, bh * (1 - straight))
+    u, v = xs - x0 + 0.5, ys - y0 + 0.5
+    bw, bh = x1 - x0, y1 - y0
+    t = np.clip((v - bh * straight) / max(1, bh * (1 - straight)), 0, 1)
+    point = (bw / 2) * t ** 1.6
     return (u >= 0) & (u < bw) & (v >= 0) & (v < bh) & (u >= point) & (u < bw - point)
 
 
 def team_mark(k: int, rgb: np.ndarray, opaque: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Team mark k (RGB 0..1, and where it is drawn): the small one (no team) a dark dash; the shields Minecraft
-    shields in their team's pattern (as the game's own, in flat wool colours) with an iron rim, and a dark middle
-    where the game's own is, as the game writes the team's number there in white."""
+    """Team mark k (RGB 0..1, and where it is drawn): the small one (no team) a dark dash; the shields in their
+    team's pattern (as the game's own, in bone white, blood red and black) with an iron rim, and a dark middle where
+    the game's own is, as the game writes the team's number there in white."""
     h, w = opaque.shape
     out, drawn = np.zeros((h, w, 3)), np.zeros((h, w), bool)
     if h < 30:  # no team: a dash, dark so it shows on the light panel
@@ -412,7 +421,7 @@ def team_mark(k: int, rgb: np.ndarray, opaque: np.ndarray) -> tuple[np.ndarray, 
         fill[left ^ upper] = "R"
     for key, c in WOOL.items():
         out[shield & (fill == key)] = colour(c)[:3]
-    out[shield & ~I._shrink(shield, 2)] = colour("#7c7c7c")[:3]  # the iron rim
+    out[shield & ~I._shrink(shield, 2)] = colour("#6a6672")[:3]  # the iron rim
     out[shield & ~I._shrink(shield, 1)] = colour("#141414")[:3]
     lab, n = I._label(opaque & (rgb @ I.LUMA < 0.15))
     mid = lab[int(h * 0.4), w // 2]

@@ -1,27 +1,30 @@
 # Age of Halloween
 
-A mod for **Age of Empires II: Gold Edition** that replaces the units and
-buildings with blocky, pixel-art Minecraft-style ones. There are villagers in
-robes, diamond-armoured champions, skeleton archers, pillager crossbowmen and
-snow-golem skirmishers. Knights ride horses in Minecraft horse armour. Ravagers
-serve as battering rams, dispenser minecarts as mangonels, and a TNT cannon as
-the bombard. Creepers are the petards, and the fleet sails under team-coloured
-wool. All 90 units are modelled, and every building too: houses, town centers,
-castles, walls and gates in five Minecraft village styles that upgrade with
-each age, the eighteen wonders, wheat farms, and the whole map (forests, gold
-and stone, berry bushes, animals, fish and decorations). Even the panels at the
-top and bottom of the screen look like Minecraft's inventory. And easter
-eggs: build a Wonder and it trains Pac-Man, and a dragon that spits fire.
+A mod for **Age of Empires II: Gold Edition** that turns the whole game into a
+Halloween night. Zombie villagers shuffle to work, skeleton soldiers march with
+ghoul crossbowmen and imp skirmishers, death knights ride nightmares and the
+Paladin is the Headless Horseman. Coffin rams, bone catapults and a gallows
+trebuchet lay siege; ghost ships sail under torn sails. Every building is
+haunted, in five haunted cultures (Victorian haunted houses, Transylvanian
+gothic, mummy tombs, ghost lanterns and Day of the Dead) that change with each
+age, with walls, castles and eighteen haunted wonders. Farms are pumpkin
+patches, forests are twisted and bare, and the menu is a churchyard under a
+full moon. All 105 units are modelled. Easter eggs: build a Wonder and it
+trains Pac-Man, a scary jack-o'-lantern, and a Bone Dragon breathing green
+fire; trade carts are ghost trains laying their own rails, and on the Witch
+Brew Islands map villagers build cauldrons that spit brew at enemy ships.
 
-![battle](previews/battle.png)
+![style](previews/style.png)
 
-The sprites are generated, not hand-drawn. Each unit is a Minecraft-style box
-model and each building a grid of blocks. A small renderer draws them from
-AoE2's isometric camera, in all directions and animation frames, with
-team-colour regions ready for the game palette.
+The pictures are generated, not hand-drawn. Each unit and building is a model
+of smooth shapes (spheres, rods, turned and cut shapes) with painted materials,
+drawn by a small ray tracer from AoE2's camera in every direction and
+animation frame, with team-colour regions ready for the game's palette.
 
 See [docs/DESIGN.md](docs/DESIGN.md) for the art direction and the path into
-the game, and [docs/UNITS.md](docs/UNITS.md) for the full unit list.
+the game, and [docs/UNITS.md](docs/UNITS.md) for the full unit list. Age of
+Halloween is built on [Age of Minecraft](https://github.com/alexsson-xexpanderx/age-of-minecraft)'s
+machinery, and the two install side by side.
 
 ## Try it in your game
 
@@ -29,95 +32,91 @@ You need AoE2: The Conquerors with UserPatch 1.5, and Python 3.
 Double-click **`build_mod.bat`** (it finds your game or asks for the folder),
 then double-click **Age of Halloween** on your desktop. The build reads your own
 game files and makes Age of Halloween a game of its own (a UserPatch mod with
-its own `age_of_halloween.exe` and a villager king icon), so your normal game
+its own `age_of_halloween.exe` and a jack-o'-lantern icon), so your normal game
 stays untouched. Full steps and options are in [docs/INSTALL.md](docs/INSTALL.md).
 
 ## Previews
 
 ```sh
 pip install -r tools/requirements.txt
-python tools/concept_sheet.py        # writes previews/* and docs/UNITS.md
+python tools/cast_sheet.py           # previews/cast_<group>.png
+python tools/town_sheet.py           # previews/town_<group>.png
+python tools/wilds_sheet.py          # previews/wilds.png
+python tools/style_sheet.py          # previews/style.png
 ```
 
 | File | Shows |
 |---|---|
-| `previews/roster_<group>.png` | every unit of a group in the 5 stored directions (civilians, infantry, cavalry, siege, ships, uniques, animals) |
-| `previews/anim_<group>.gif` | walk, attack, work and death cycles for each group |
-| `previews/battle.png` | siege and cavalry storming a town |
-| `previews/harbor.png` | the fleet off the coast |
-| `previews/scene.png` | two armies at in-game size |
-| `previews/village.png` | a Dark Age village with fields, a forest and mines |
-| `previews/buildings.png` | every building in the five village styles and the ages |
-| `previews/fortifications.png` | walls, gates, towers and castles |
-| `previews/walls.png` | wall lines in every direction and with corners, placed as the game places them |
-| `previews/wonders.png` | the eighteen wonders and the scenario monuments |
-| `previews/nature.png` | trees, resources and map decorations |
-| `previews/farms.png` | farms, which the game draws as ground: being built, grown and exhausted |
-| `previews/interface.png` | the resource bar and bottom panel in the Minecraft style, on a stand-in for the game's own panel |
-| `previews/menu.png` | the main menu: a block village on a clear day, with the game's texts and buttons drawn over it |
-| `previews/screens.png` | the other screens as the deepslate hall, and the loading screen, on stand-in screens |
-| `previews/player_colors.png` | a unit in all 8 player colours |
-| `previews/roster_easter.png` | the easter eggs: Pac-Man, a ghost and a blocky Cobra Car in the cheat units' slots, and the Wonder's Dragon |
-| `previews/giant.png` | the "to smithereens" cheat's giant red Pac-Man by a Castle, a Wonder, Pac-Man and a knight |
-| `previews/lava.png` | Team Lava Islands: an island's beach with a Dock, and ships on the lava |
-| `previews/rails.png` | trains between two Markets, round a wood, on the rails they lay as they go |
-| `previews/sounds/pacman_*.wav` | Pac-Man's sounds: clicking on him, orders, training, bites and his death |
-| `previews/sounds/dragon_*.wav` | the Dragon's sounds: growls, wing beats, roars, its fire and its death |
+| `previews/style.png` | the look: Pac-Man and the giant, skeletons, a haunted house, a graveyard wall, dead trees |
+| `previews/cast_<group>.png` | every unit of a group (civilians, foot, uniques, cavalry, siege, ships, animals, easter eggs) |
+| `previews/town_<group>.png` | the buildings in the five haunted cultures and the ages: houses, halls, military, economy, forts, walls, wonders, building sites |
+| `previews/wilds.png` | trees, mines, bushes, rocks, plants and the map decorations |
+| `previews/farms.png` | the pumpkin patches, which the game draws as ground: being built, grown and exhausted |
+| `previews/menu.png` | the main menu, with the game's texts and buttons drawn over it |
+| `previews/loading.png` | the loading screen |
+| `previews/screens.png` | the other screens as the crypt, and the loading screen, on stand-in screens |
+| `previews/interface.png` | the resource bar and bottom panel, on a stand-in for the game's own panel |
 
 ## Layout
 
 ```
-tools/aoh/textures.py    pixel-art texture helpers (ASCII-art faces, noise, team colour)
-tools/aoh/geometry.py    box models: parts, pivots, held items as extruded sprites
-tools/aoh/render.py      isometric ray-caster -> palette-agnostic frames
+tools/aoh/sculpt.py      the ray tracer: smooth shapes (spheres, rods, turned shapes, blocks, cut by planes), the
+                         night's light, glowing materials, ink lines; draws Age of Minecraft's boxes too
+tools/aoh/paint.py       materials: pumpkin, wood, bricks, shingles, bone, bark, team cloth, metal, noise
+tools/aoh/geometry.py    model parts and poses (shared with the old box models)
 tools/aoh/animation.py   rigs and attack styles: stand / walk / attack / die / carry poses
-tools/aoh/items.py       held items: swords, tools, bows, crossbows, tridents, firework gun...
-tools/aoh/units.py       biped builder, mob looks, foot units, villagers and their jobs
-tools/aoh/mounted.py     horses, donkeys, zombie horses, llamas and their riders
-tools/aoh/siege.py       ravagers, dispenser carts, crossbow turrets, TNT cannon, trebuchet, wagons
-tools/aoh/ships.py       boats and warships with team sails
-tools/aoh/animals.py     sheep, chicken, goat, hoglin, pig, wolf, ocelot, phantom, parrot, fish, dolphin
+tools/aoh/creatures.py   bodies (skeleton, zombie, ghoul, imp, werewolf, mummy, vampire, ghost...) and their gear
+tools/aoh/infantry.py    villagers, monk, king, foot soldiers, archers and the foot unique units
+tools/aoh/cavalry.py     nightmares and bone horses and their riders, the Headless Horseman
+tools/aoh/engines.py     coffin rams, bone catapults and ballistae, the bombard, the trebuchet, the hearse, the ghost train
+tools/aoh/ghostships.py  ghost ships, the ferry of the dead, the coffin bomb
+tools/aoh/beasts.py      animals, and the ghost, the hot-rod hearse and the Bone Dragon
+tools/aoh/pumpkins.py    Pac-Man and the giant Pac-Man as jack-o'-lanterns, and small lanterns
+tools/aoh/undead.py      skulls and bones
 tools/aoh/roster.py      the full roster and preview groups
-tools/aoh/blocks.py      Minecraft block textures (woods, stones, ores, glass, leaves, workstations)
-tools/aoh/voxel.py       block structures: shapes (stairs, slabs, fences, walls, panes), roofs, domes
-tools/aoh/styles.py      the five building sets' materials per age
-tools/aoh/architecture.py  how each set builds: platforms, walls, roofs, doors and towers
-tools/aoh/structures.py  houses, town center, mill, camps, barracks, range, stable, market, dock...
-tools/aoh/fortifications.py  walls, gates, towers and castles
-tools/aoh/wonders.py     the eighteen wonders and scenario monuments
-tools/aoh/nature.py      trees, stumps, mines, berry bushes, rocks and plants
-tools/aoh/gaia.py        map decorations: yurts, ruins, graves, flags, torches, the relic
-tools/aoh/farmland.py    farms, which are terrain: Minecraft farmland and wheat in terrain.drs
-tools/aoh/lava.py        the lava (the unused terrain 15), Docks on it, and the Team Lava Islands map
-tools/aoh/rails.py       trains laying their own rails: a track left behind them on the ground (an unused graphic)
-tools/aoh/volcano.py     volcanoes Villagers build on the lava by the beach, erupting at enemies (the unused Sea Tower)
-tools/aoh/interface.py   the screen panels repainted: planks, inventory grey, slots and item icons
-tools/aoh/menu.py        the main menu: a block village by day, every button a Minecraft thing, names on Minecraft buttons
-tools/aoh/screens.py     the other screens: found by their screen files, redrawn as the deepslate hall
-tools/aoh/loadscreen.py  the loading screen: the logo, open sky and a floating block island, in a palette of its own
-tools/aoh/props.py       renders buildings and scenery in the original sprite's frame layout
+tools/aoh/haunted.py     the five haunted cultures (kits per age) and the parts buildings are made of
+tools/aoh/estates.py     houses, town center, mill, camps, barracks, range, stable, market, dock, farms, sites
+tools/aoh/fortress.py    walls, gates, towers, the outpost and castles
+tools/aoh/marvels.py     the eighteen wonders and the scenario monuments
+tools/aoh/wilds.py       trees, stumps, mines, bushes, rocks, plants, map decorations and projectiles
+tools/aoh/graveyard.py   railings, skulls and dead trees
+tools/aoh/farmland.py    farms, which are terrain: pumpkin patches in terrain.drs
+tools/aoh/lava.py        the witch's brew (the unused terrain 15), Docks on it, and the Witch Brew Islands map
+tools/aoh/rails.py       ghost trains laying their own rails: a track left behind them on the ground
+tools/aoh/volcano.py     cauldrons Villagers build in the brew by the beach, spitting brew at enemies (the Sea Tower)
+tools/aoh/interface.py   the screen panels repainted: old planks, a bone-pale panel, slots and icons
+tools/aoh/nightscape.py  painting the menus: night sky, moon, hills, mist, stone and planks, the title
+tools/aoh/trinkets.py    the menu's button objects: a jack-o'-lantern, a skull shield, a spell book, a cauldron...
+tools/aoh/menu.py        the main menu: a churchyard at night, every button a Halloween thing, names on boards
+tools/aoh/screens.py     the other screens: found by their screen files, redrawn as the crypt
+tools/aoh/loadscreen.py  the loading screen: a full moon over a churchyard, in a palette of its own
+tools/aoh/props.py       draws buildings and scenery in the original sprite's frame layout
 tools/aoh/slp.py         SLP 2.0N sprite encoder/decoder
 tools/aoh/drs.py         DRS archive reader/writer
 tools/aoh/palette.py     game palette and colour matching
 tools/aoh/datfile.py     graphics and terrain table reader for empires2_x1_p1.dat
 tools/aoh/datunits.py    reads and patches the civilisations' unit tables in the .dat
-tools/aoh/gameplay.py    Pac-Man and the Dragon at the Wonder: the .dat changes, icons, names and sounds
+tools/aoh/gameplay.py    Pac-Man and the Bone Dragon at the Wonder: the .dat changes, icons, names and sounds
 tools/aoh/langdll.py     reads and changes strings in the game's language DLLs
 tools/aoh/pe.py          Windows DLL/exe resources: read them, give a copy new ones in an added section
-tools/aoh/appicon.py     the villager king icon: the .ico file, and in place in the mod's own exe (and PNGs)
+tools/aoh/appicon.py     the jack-o'-lantern icon: the .ico file, and in place in the mod's own exe
 tools/aoh/sounds.py      Pac-Man's sounds, synthesised in an 8-bit arcade style
-tools/aoh/roars.py       the Dragon's sounds: roars, growls, wing beats and fire, synthesised
-tools/aoh/easter.py      Pac-Man, the ghost, the Cobra Car, the giant red Pac-Man and the Dragon
-tools/aoh/slpmap.py      which original sprite id each unit render replaces
+tools/aoh/roars.py       the dragon's sounds: roars, growls, wing beats and fire, synthesised
+tools/aoh/slpmap.py      which original sprite id each unit replaces
 tools/aoh/spritemap.py   finds buildings, walls, trees and decorations by name in the .dat
-tools/aoh/export.py      renders an animation in the original sprite's frame layout
+tools/aoh/export.py      draws an animation in the original sprite's frame layout
 tools/build_mod.py       builds the mod from your game files (build_mod.bat on Windows)
-tools/concept_sheet.py   preview generator
+tools/*_sheet.py         the preview sheets; concept_sheet.py draws the menu, screens and panel previews
 tools/tests/             format round trips and a full build against a fake game folder
 ```
 
+The modules Age of Minecraft drew with (units.py, mounted.py, siege.py, ships.py, animals.py, easter.py,
+structures.py, voxel.py, blocks.py and the rest) are still in `tools/aoh/`: the Halloween models take their keys
+and sizes, and a few tests compare against them.
+
 ## Status
 
-All 90 units, every building in all five styles and ages, walls and gates,
-the wonders, the farms, and the map's nature and animals are modelled and
-exported. The next step is testing them together in the game.
+All 105 units, every building in the five haunted cultures and the ages, walls
+and gates, the wonders, the pumpkin patches, the map's nature and decorations,
+the menu, the loading screen, the other screens and the panels are made. The
+next step is playing it.

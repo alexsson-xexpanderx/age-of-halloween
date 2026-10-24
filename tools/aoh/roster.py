@@ -11,7 +11,7 @@ from .siege import SIEGE
 from .units import FOOT, Unit
 from . import beasts, cavalry, engines, ghostships, infantry, pumpkins
 
-# the Halloween models made so far, under the keys of the Minecraft ones they replace (the rest are still those)
+# the Halloween models, under the keys of the Minecraft ones they replace (every key has one)
 HALLOWEEN: dict[str, Callable[[], Unit]] = {
     **infantry.FOOT, **cavalry.MOUNTED, **engines.SIEGE, **ghostships.SHIPS, **beasts.ANIMALS, **beasts.EASTER,
     "pacman": pumpkins.pacman,  # (the giant is drawn by gameplay.giant_slp, from pumpkins.giant_pacman)
@@ -28,7 +28,7 @@ SHEETS = [
     ("ships", "Ships", lambda u: u.group == "ship" and not u.civ),
     ("uniques", "Unique units", lambda u: u.civ is not None),
     ("animals", "Animals", lambda u: u.group == "animal"),
-    ("easter", "Easter eggs (cheat units) and the Dragon", lambda u: u.group == "easter"),
+    ("easter", "Easter eggs (cheat units) and the Bone Dragon", lambda u: u.group == "easter"),
 ]
 
 
