@@ -16,6 +16,7 @@ import zlib
 import numpy as np
 
 from . import haunted as H
+from . import spooky as Y
 from . import paint as P
 from . import sculpt as S
 from .geometry import Part
@@ -80,7 +81,7 @@ def wall_piece(kind: str, style: str, piece: str, damage: int = 0, progress: flo
             k = H.kit(style, 3)
             out.append(box((-r - 1.5, -r - 1.5, top), (r + 1.5, r + 1.5, top + 2.5), k.base))
             if style == "F":
-                out += H.pagoda_roof(k, -r, r, -r, r, top + 2.5, 12.0, over=4.0)
+                out += Y.roof(k, -r, r, -r, r, top + 2.5, "curved", "x", rise=12.0, over=4.0)[0]
             elif style == "E":
                 out += H.spire(0.0, 0.0, top + 2.5, r * 0.9, 34.0, k.roof)
             elif style == "W" or style == "G":
@@ -229,7 +230,7 @@ def _crown(k, style, r, top, stone) -> list:
                 out.append(box((x - 3.0, y - 3.0, top + 3.0), (x + 3.0, y + 3.0, top + 10.0), stone))
         out += H.dome(0.0, 0.0, top + 3.0, r * 0.55, k.roof, onion=True)
     elif style == "F":
-        out += H.pagoda_roof(k, -r, r, -r, r, top + 3.0, r * 0.8, over=6.0)
+        out += Y.roof(k, -r, r, -r, r, top + 3.0, "curved", "x", rise=r * 0.8, over=6.0)[0]
     else:
         out.append(box((-r * 0.6, -r * 0.6, top + 3.0), (r * 0.6, r * 0.6, top + 9.0), k.wall))
         f = S.Ellipsoid(S.mat(P.hexrgb("#ffb030"), glow=1.0), S._orient((0, 0, top + 13.0)), radii=(4.0, 4.0, 6.0))
@@ -297,8 +298,8 @@ def outpost() -> Part:
 def castle(style: str, age: int = 3) -> Part:
     """The castle (4x4): a keep inside curtain walls with four towers and a gatehouse. W a haunted castle under
     purple witch-hat roofs, E Dracula's castle bristling with needle spires and red windows, M a tomb fortress of
-    sandstone with domes, F a black keep of stacked curved roofs, X a temple fortress on a stepped pyramid with a
-    rack of skulls."""
+    sandstone with domes, F a black keep of stacked curved gables, X a painted haunted mansion with a belfry and a
+    rack of skulls (no pyramids: the player asked). Ravens on the walls, webs at the gate."""
     style = style if style in "WEMFX" else "G"
     k = H.kit(style, max(3, age))
     stone = _stone(style, "fortified", seed=7)
@@ -313,18 +314,15 @@ def castle(style: str, age: int = 3) -> Part:
         for i in range(10):
             p = av + (bv - av) * (i + 0.5) / 10
             out.append(box((p[0] - 3.0, p[1] - 3.0, wh), (p[0] + 3.0, p[1] + 3.0, wh + 6.0), stone))
-    if style == "X":  # a stepped pyramid inside, a temple on top, a skull rack before it
-        for i in range(4):
-            a = 10.0 * i
-            out.append(box((-50 + a, -50 + a, 10.0 * i), (40 - a, 40 - a, 10.0 * (i + 1)), k.wall if i % 2 == 0 else
-                           k.base))
-        out += H.walls(k, -16, -16, 6, 6, 40.0, 22, door=("+y", -5.0, 7.0, 14.0), plinth=0.0)
-        out += H.terrace(k, -16, -16, 6, 6, 62.0, steps=2)
+    if style == "X":  # a painted haunted mansion inside, a belfry, a skull rack before it
+        keep, top = Y.manor(k, -48, -48, 24, 24, 3, "x", "+y", door_at=-12.0, roof_kind="tiles", porch_at=False,
+                            dormers=0, seed=31, storey_h=18.0, tower=(-42.0, 34.0, 8.0, 76.0))
+        out += keep
         for i in range(5):  # tzompantli: a rack of skulls
             x = 10.0 + i * 8.0
             out += skull((x, 58.0, 4.0), 2.2, i) + skull((x, 58.0, 10.0), 2.2, i + 5)
         out += [S.rod((8.0, 58.0, 14.0), (46.0, 58.0, 14.0), 0.6, k.trim)]
-        keep_top = 72.0
+        keep_top = top
     elif style == "M":
         out += H.walls(k, -44, -44, 24, 24, 0.0, 70, door=("+y", -10.0, 10.0, 26.0), m=stone)
         out += [box((-44.5, -44.5, 50.0), (24.5, 24.5, 56.0), k.upper)]
@@ -333,12 +331,13 @@ def castle(style: str, age: int = 3) -> Part:
         keep_top = 110.0
     elif style == "F":
         tiers = 4
-        for i in range(tiers):
+        for i in range(tiers):  # each storey under its own curved gable, the gables turning a quarter each time
             a = 7.0 * i
-            out += H.walls(k, -44 + a, -44 + a, 24 - a, 24 - a, 22.0 * i, 22.0, door=("+y", -10.0, 10.0, 16.0) if i == 0
-                           else None, plinth=0.0, m=stone if i == 0 else k.wall)
-            out += H.pagoda_roof(k, -44 + a, 24 - a, -44 + a, 24 - a, 22.0 * (i + 1), 10.0, over=8.0)
-        keep_top = 22.0 * tiers + 12.0
+            out += Y.storey(k, -44 + a, -44 + a, 24 - a, 24 - a, 22.0 * i, 22.0, m=stone if i == 0 else k.wall,
+                            door=("+y", -10.0, 10.0, 16.0) if i == 0 else None, seed=40 + i, boarded=0.1, shutters=0)
+            out += Y.roof(k, -44 + a, 24 - a, -44 + a, 24 - a, 22.0 * (i + 1), "curved", "x" if i % 2 == 0 else "y",
+                          rise=12.0, over=8.0, seed=40 + i)[0]
+        keep_top = 22.0 * tiers + 14.0
     else:
         out += H.walls(k, -44, -44, 20, 20, 0.0, 80, door=("+y", -12.0, 10.0, 24.0), m=stone)
         out += [box((-46, -46, 80.0), (22, 22, 84.0), k.base)]
@@ -363,7 +362,7 @@ def castle(style: str, age: int = 3) -> Part:
         elif style == "M":
             out += H.dome(x, y, 66.0, 12.0, k.roof, onion=True)
         elif style == "F":
-            out += H.pagoda_roof(k, x - 16, x + 16, y - 16, y + 16, 66.0, 12.0, over=6.0)
+            out += Y.roof(k, x - 16, x + 16, y - 16, y + 16, 66.0, "curved", "x", rise=12.0, over=6.0)[0]
         else:
             out.append(box((x - 10, y - 10, 66.0), (x + 10, y + 10, 72.0), k.wall))
             f = S.Ellipsoid(S.mat(P.hexrgb("#ffb030"), glow=1.0), S._orient((x, y, 76.0)), radii=(4.0, 4.0, 6.0))
@@ -378,4 +377,7 @@ def castle(style: str, age: int = 3) -> Part:
     out += H.wall_banner(R + 6.0, -30.0, 40.0, "+x", 8.0, 22.0) + H.wall_banner(R + 6.0, 30.0, 40.0, "+x", 8.0, 22.0)
     out += H.wall_banner(-30.0, R + 6.0, 40.0, "+y", 8.0, 22.0) + H.wall_banner(30.0, R + 6.0, 40.0, "+y", 8.0, 22.0)
     out += H.team_flag((-12.0, -12.0, keep_top), 18.0, 5)
+    out += Y.ravens([(R, -20.0, wh + 6.0), (20.0, R, wh + 6.0), (R, 44.0, wh + 6.0)], 5)
+    out += Y.web((14.0, R + 10.0, 58.0), (-1.0, 0, 0), (0, 0, -1.0), 9.0, 5)
+    out += Y.web((R + 6.0, R + 6.0, wh - 0.5), (-1.0, 0, 0), (0, 0, -1.0), 8.0, 6)
     return Part("castle", boxes=out)

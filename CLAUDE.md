@@ -49,7 +49,10 @@ putting `tools/` on `sys.path`.
   tests. That key is the one used by `--only`, `slpmap.Target.unit` and `docs/UNITS.md`. Bodies come from
   `creatures.body` + `Gear`.
 - Buildings and scenery are Parts too: `haunted.kit(style, age)` gives each culture's materials and manners (G Dark
-  Age, W Victorian, E Transylvanian, M mummy tombs, F ghost lanterns, X Day of the Dead), `estates.py` the
+  Age, W Victorian, E Transylvanian, M desert houses, F ghost lanterns, X Day of the Dead), `spooky.manor()` the
+  haunted house every building is made of (storeys with boarded windows and broken shutters, crooked roofs:
+  gable, gambrel, mansard, curved, tiles, flat, never a pyramid; dormers, chimney, porch, turret, `web()`,
+  `ravens()`, `fence()`), `estates.py` the
   buildings, `fortress.py` walls/gates/towers/castles, `marvels.py` wonders, `wilds.py` trees, mines, decorations
   and projectiles. `props.build()` routes each spec to them (`HALLOWEEN_BUILDINGS`, `HALLOWEEN_TREES`); the
   spec's `mode` (variants / anim / facing / pieces / overlay) says how the original SLP's frames are organised.

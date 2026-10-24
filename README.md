@@ -5,9 +5,11 @@ Halloween night. Phantom villagers glide to work, skeleton soldiers march with
 ghoul crossbowmen and imp skirmishers, death knights ride nightmares and the
 Paladin is the Headless Horseman. Coffin rams, bone catapults and a gallows
 trebuchet lay siege; ghost ships sail under torn sails. Every building is
-haunted, in five haunted cultures (Victorian haunted houses, Transylvanian
-gothic, mummy tombs, ghost lanterns and Day of the Dead) that change with each
-age, with walls, castles and eighteen haunted wonders. Farms are pumpkin
+a haunted house, with crooked roofs, boarded windows, porches, turrets, spider
+webs and ravens, in five haunted cultures (Victorian haunted houses,
+Transylvanian gothic, haunted desert houses, ghost lanterns and Day of the
+Dead) that change with each age, with walls, castles and eighteen haunted
+wonders. Farms are pumpkin
 patches, forests are twisted and bare, and the menu is a churchyard under a
 full moon. All 105 units are modelled. Easter eggs: build a Wonder and it
 trains Pac-Man, a scary jack-o'-lantern, and a Bone Dragon breathing green
@@ -75,6 +77,7 @@ tools/aoh/pumpkins.py    Pac-Man and the giant Pac-Man as jack-o'-lanterns, and 
 tools/aoh/undead.py      skulls and bones
 tools/aoh/roster.py      the full roster and preview groups
 tools/aoh/haunted.py     the five haunted cultures (kits per age) and the parts buildings are made of
+tools/aoh/spooky.py      the haunted house: storeys, crooked roofs, dormers, porches, turrets, webs, ravens
 tools/aoh/estates.py     houses, town center, mill, camps, barracks, range, stable, market, dock, farms, sites
 tools/aoh/fortress.py    walls, gates, towers, the outpost and castles
 tools/aoh/marvels.py     the eighteen wonders and the scenario monuments

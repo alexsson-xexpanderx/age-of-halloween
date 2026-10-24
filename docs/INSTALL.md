@@ -103,10 +103,12 @@ each one backed up first, and **`restore_original.bat`** puts them back.
   decaying, plus villager work and carry animations: phantom villagers,
   skeleton armies, death knights on nightmares, ghost ships and more. Male and
   female villagers share the phantom models.
-* All buildings are replaced, in five haunted cultures (Victorian haunted
-  houses, Transylvanian gothic, mummy tombs, ghost lanterns, Day of the Dead)
-  and every age, with walls, gates, towers, castles, docks and the eighteen
-  wonders.
+* All buildings are replaced by haunted houses: crooked steep roofs, boarded
+  windows and broken shutters, porches with jack-o'-lanterns, turrets,
+  chimneys, spider webs, ravens, broken fences and graves. They come in five
+  haunted cultures (Victorian haunted houses, Transylvanian gothic, haunted
+  desert houses, ghost lanterns, Day of the Dead) and every age, with walls,
+  gates, towers, castles, docks and the eighteen wonders. No pyramids.
 * Farms are pumpkin patches. A farm is part of the ground in this game, so
   the build replaces its textures in `terrain.drs`. While a villager builds a
   farm, vines sprout and small green pumpkins grow. A finished farm has big

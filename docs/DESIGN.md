@@ -55,6 +55,17 @@ Every building stands on its footprint at the game's size (a 2 × 2 house, a
 3 × 3 barracks, a 4 × 4 castle, a 5 × 5 wonder), and the walls the camera sees
 carry its doors, lit windows and decorations.
 
+Every building is a haunted house first. It has steep roofs that sag and lean,
+with shingles missing and moss on them, plus dormers, a round attic window in
+the gable and a leaning brick chimney. Some windows are boarded up and some have
+shutters hanging off one hinge. A porch has turned posts, a broken railing,
+steps with jack-o'-lanterns and a lantern. The cultures add their turrets
+(witch's hats, needle spires, minarets, lantern towers, belfries) and gothic
+houses add gargoyles. Spider webs sit in corners here and there, ravens perch on
+ridges, and yards have broken picket fences, gravestones and bare, dead trees.
+No building is a pyramid: every roof is a gable, a barn's two-pitched roof, a
+mansard, a curved East Asian gable or a flat roof behind a crumbling parapet.
+
 ### Five haunted cultures, four ages
 
 AoE2 gives every civilisation one of five building sets, plus one Dark Age
@@ -65,9 +76,9 @@ look for everyone. Each becomes a haunted culture, built in its own way:
 | Dark Age (everyone) | crooked log cabins under rotting thatch, mossy stones, a lantern by the door |
 | West European (Britons, Franks, Celts, Spanish) | haunted Victorian: peeling clapboard, then half-timbering, then soot-black brick; steep purple shingle gables with iron cresting, witch-hat turrets, pumpkins on the steps |
 | Central European (Goths, Teutons, Vikings, Huns) | Transylvanian gothic: dark stone, pointed windows lit blood red, needle spires |
-| Middle Eastern (Byzantines, Persians, Saracens, Turks) | mummy tombs: sandstone with bands of hieroglyphs, flat roofs and domes, green tomb light |
-| East Asian (Japanese, Chinese, Mongols, Koreans) | ghost lanterns: black timber and paper walls, curved tile roofs, red paper lanterns |
-| Mesoamerican (Aztecs, Mayans) | Day of the Dead: brightly painted plaster, stepped terraces, marigolds and candles |
+| Middle Eastern (Byzantines, Persians, Saracens, Turks) | haunted desert houses: sandstone with bands of hieroglyphs behind crumbling parapets, onion domes, minarets, a cursed violet light in the windows |
+| East Asian (Japanese, Chinese, Mongols, Koreans) | ghost lanterns: black timber and torn paper walls under curved gables swept up at the eaves, red paper lanterns |
+| Mesoamerican (Aztecs, Mayans) | Day of the Dead: brightly painted houses under terracotta roofs, painted belfries, papel picado bunting, marigolds and candles |
 
 ### Building mapping
 
@@ -75,26 +86,26 @@ look for everyone. Each becomes a haunted culture, built in its own way:
 
 | AoE2 building | Haunted |
 |---|---|
-| House | a haunted home in its culture's manner, three variants like the game's three house pictures |
-| Town Center | the village's great hall and its tower, flags and a graveyard by the gate |
-| Mill | a windmill with tattered sails turning, sacks and a pile of pumpkins |
+| House | a haunted house in its culture's manner, three variants like the game's three house pictures: a house with a porch and a turret, a mansard house with dormers, a tall gable end to the street, a witch's cottage |
+| Town Center | the village's great haunted house, three storeys, a tall turret, a porch, flags, a fenced graveyard by the gate and a dead tree |
+| Mill | a crooked windmill with boarded windows and tattered sails turning, sacks, a pile of pumpkins, a raven on top |
 | Farm | a pumpkin patch (see *Farms* below) |
-| Lumber / Mining Camp | an open shed with dead logs and an axe in a stump / a shed, a cart heaped with ore, a skull on a post |
-| Barracks | a hall with a training yard of pumpkin-headed dummies and a weapon rack |
-| Archery Range | a long shed and straw targets painted with skulls, shot full of arrows |
-| Stable | a long barn, an iron-fenced paddock, hay, a trough of black water, a horse skull |
+| Lumber / Mining Camp | a crooked shack, dead logs and an axe in a stump / a crooked shack, a cart heaped with ore, a skull on a post |
+| Barracks | a haunted manor with a training yard of pumpkin-headed dummies and a weapon rack |
+| Archery Range | a long, crooked hall and straw targets painted with skulls, shot full of arrows |
+| Stable | a sagging barn under a two-pitched roof, a paddock of broken pickets, hay, a trough of black water, a horse skull |
 | Blacksmith | a smithy with a great chimney, its forge burning green, green smoke rising |
 | Market | a trading hall and stalls under awnings in the owner's colour |
-| Monastery | the culture's house of the dead, in a graveyard: a gothic chapel, a black church with a needle spire, a domed mausoleum, a temple with a torii gate, an ossuary chapel |
+| Monastery | a haunted chapel under a steep roof and a tall tower (a witch's-hat turret, a needle spire, a minaret, a lantern tower, a painted belfry), in a graveyard |
 | University | a necromancer's academy with an observatory, a brass orrery of skulls turning on top |
-| Siege Workshop | a big barn, a half-built bone catapult and stacks of coffins |
+| Siege Workshop | a huge, leaning barn with a lit hay door, a half-built bone catapult and stacks of coffins |
 | Dock | a pier of black planks, a boathouse, a crane with a cage, lanterns |
 | Fish Trap | black stakes and a sagging net with bony fish in it |
 | Towers, Outpost | taller and stouter each level, with battlements and spires; the outpost a black post with a crow's nest, a green lantern and a raven |
 | Walls | black sharpened stakes, skulls stuck on some / a mossy graveyard wall with an iron railing of spears / a tall dark rampart with merlons, iron spikes and a walkway, in the culture's colours; ends and corners are pillars, so every wall line joins up |
 | Gates | a gothic arch with a spiked iron portcullis, down when shut and up when open, between two towers |
 | Castle | a keep inside curtain walls with four towers and a gatehouse, in the culture's manner |
-| Wonders | one per civilisation, haunted: a gothic cathedral, a vampire lord's castle on a crag, a necropolis under a great dome, pyramids, a Day of the Dead step pyramid, a cursed pagoda, a stave church, and more |
+| Wonders | one per civilisation, haunted: gothic cathedrals, a vampire lord's castle on a crag, a haunted great hall, a stave church of crossing gables with dragon heads, necropolises under great domes, ghost palaces of curved gables, Day of the Dead churches with bell towers, and more; the scenario pyramids are crypts |
 | Building sites, rubble | dug earth and black scaffolding / broken stones, charred beams, a skull, embers |
 
 All the sheets: `previews/town_*.png` (houses, halls, military, economy,

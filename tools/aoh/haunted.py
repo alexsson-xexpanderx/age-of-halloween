@@ -204,7 +204,7 @@ def kit(key: str, age: int) -> Kit:
                 4: P.bricks(P.hexrgb("#c8b890"), P.hexrgb("#7e6e4e"), 6.0, 3.0, seed=33)}
         return Kit("M", a, sand[a], glyphs(P.hexrgb("#b8a070"), seed=34), sand[min(a + 1, 4)],
                    sand[a], P.wood(P.hexrgb("#5a4028"), P.hexrgb("#2a1c10"), along=2, seed=35),
-                   P.hexrgb("#7cff6a"), "flat", "round", accent=P.GOLD)
+                   P.hexrgb("#b070ff"), "flat", "round", accent=P.GOLD)  # cursed violet light
     if key == "F":
         paper = plaster(P.hexrgb("#c8c0b0"), P.hexrgb("#6e685c"), timber=P.hexrgb("#141010"), grid=(7.0, 9.0),
                         seed=41)
@@ -219,8 +219,8 @@ def kit(key: str, age: int) -> Kit:
                4: [P.hexrgb("#6a3a9a"), P.hexrgb("#e0407a"), P.hexrgb("#2aa0a0")]}
     return Kit("X", a, painted(colours[a], seed=51, skulls=a >= 3), painted(colours[a][::-1], seed=52),
                P.bricks(P.hexrgb("#7a7468"), P.hexrgb("#3e3a34"), 5.0, 3.0, moss=1.0, seed=53),
-               thatch(P.hexrgb("#7a6a40"), seed=54) if a == 2 else P.bricks(P.hexrgb("#8a8274"), P.hexrgb("#4a4438"),
-                                                                           5.0, 2.6, moss=0.8, seed=54),
+               thatch(P.hexrgb("#7a6a40"), seed=54) if a == 2 else P.shingles(P.hexrgb("#a04a2a"), P.hexrgb("#4a1a10"),
+                                                                             w=1.8, h=1.4, seed=54, axes=(0, 2)),
                P.wood(P.hexrgb("#4a3020"), P.hexrgb("#1e120a"), along=2, seed=55), P.hexrgb("#ffb040"),
                "thatch" if a == 2 else "terrace", "round", accent=P.hexrgb("#f08a10"))
 
