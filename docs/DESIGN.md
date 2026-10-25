@@ -342,8 +342,15 @@ carved jack-o'-lantern: a ribbed pumpkin with angry eyes and a carved nose,
 its mouth cut low under the nose and lined with crooked teeth. When he opens
 it as he runs and bites, a brain shows inside, lit from below. The Wonder trains him (500
 food, 500 gold, 5 minutes, 250 hit points, faster than any unit); he boards
-Transport Ships and gets the infantry upgrades. His icon, sounds and name are
-Age of Minecraft's (they took many rounds of testing in the player's game).
+Transport Ships and gets the infantry upgrades. His icon and name are Age of
+Minecraft's (they took many rounds of testing in the player's game). His sounds
+are his own, scary and nothing like Pac-Man's (the player asked): the deep,
+hollow voice of a jack-o'-lantern, as if from inside a pumpkin. Click on him
+and he chuckles "heh-heh-heh", moans like a ghost, or giggles in a whisper
+with a creak; orders get a growl and a chuckle or a creak and a hiss, and an
+attack a snarl rising into a shriek and a crunch. Every bite crunches, the
+Wonder greets him with an evil "mwa-ha-ha-ha-haaa", and he dies with a wail
+falling away, the crack of his pumpkin splitting and a last breath.
 
 The "to smithereens" cheat's Saboteur, the **giant Pac-Man**, is a walking
 haunted castle. It is black stone torn out of the ground, with a lump of rock

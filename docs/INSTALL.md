@@ -166,11 +166,12 @@ unit: he boards Transport Ships (and gets off again on any shore), walks on
 beaches, garrisons like a foot soldier, and gets the
 Blacksmith's infantry upgrades and your civilisation's infantry bonuses.
 
-He has his own arcade sounds: click on him and he goes "waka-waka" (or
-boings, or giggles), orders get a "wakawakawaka" or a big CHOMP and
-"nom nom", the Wonder plays a little jingle when he is ready, every bite
-chomps, and he dies with a sad "wah wah wah waaah" and two pops. Listen to
-them in Age of Minecraft's `previews/sounds/`. He, the Bone Dragon, the brew, the cauldrons and the trains below are
+He has his own scary sounds, the hollow voice of a jack-o'-lantern: click on
+him and he chuckles, moans like a ghost or giggles in a whisper, orders get a
+growl or a creak and a hiss, an attack a shriek and a crunch, every bite
+crunches, the Wonder greets him with an evil laugh, and he dies with a wail
+and the crack of his pumpkin splitting. `python tools/concept_sheet.py`
+writes them to `previews/sounds/` to listen to. He, the Bone Dragon, the brew, the cauldrons and the trains below are
 the mod's changes to the game's rules; `--no-wonder-pacman` leaves the rules
 alone.
 

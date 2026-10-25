@@ -1,14 +1,19 @@
-"""Pac-Man's sounds, synthesised from scratch in an 8-bit arcade style (nothing is sampled).
+"""Pac-Man's sounds: the voice of a carved jack-o'-lantern, deep, hollow and wicked, synthesised from scratch (nothing
+is sampled). The player asked for scary sounds, definitely not Pac-Man's (the 8-bit "waka-waka" of Age of
+Minecraft): there is no chomp tune, jingle or "wah wah" left.
 
-Every sound is built from small pieces: the "waka" chomp (a triangle-wave pitch sweep down and back up,
-like a jaw closing and opening), a cartoon boing, a rising bloop, a giggle, a hiccup and "nom nom".
+His voice is built like the Dragon's (roars.py): a throat's buzz, unsteady and a little rasping, through a mouth's
+resonances. But the mouth says vowels, "ha", "heh", "ooo", lowered as from a big head, with a hollow boom under them
+as if he spoke from inside a pumpkin; then it echoes. Laughter is short syllables, each a breath "h" and a vowel,
+falling in pitch. A whisper is breath alone through the vowels. A creak is slow clicks ringing in wood, as a door
+or a vine. A bite is a crunch: a burst of cracks and a wet thump.
 
-    select   clicking on him: "waka-waka" + bloop, "waka" + boing, or a giggle + "waka"
-    move     ordered to move: "wakawakawaka", or "waka" + hiccup
-    attack   ordered to attack: a big CHOMP, then "nom nom"
-    train    created at the Wonder: a rising jingle, then "waka!"
-    chomp    each bite of his attack animation
-    death    a sad "wah wah wah waaah" slide down, then two little pops
+    select   clicking on him: a low "heh-heh-heh", a ghostly moan, or a whispered giggle and a creak
+    move     ordered to move: a growl and a chuckle, or a creak and a hiss
+    attack   ordered to attack: a snarl rising into a shriek, then a crunch
+    train    created at the Wonder: an evil laugh, "mwa-ha-ha-ha-haaa"
+    chomp    each bite of his attack animation: a crunch and a little growl
+    death    a wail falling away, the crack of the pumpkin splitting, a last breath
 
 The game plays 22050 Hz, 16-bit, mono WAV files.
 """
@@ -21,153 +26,171 @@ import numpy as np
 SR = 22050
 PEAK = 0.8
 
+# a man's vowels (formants, Hz), lowered a little as from a big hollow head; the first is the loudest
+VOWELS = {"a": (730, 1090, 2440), "e": (530, 1840, 2480), "o": (570, 840, 2410), "u": (300, 870, 2240),
+          "i": (270, 2290, 3010), "m": (250, 900, 2200)}
+LOWER = 0.86
+WIDTHS = (90, 120, 170)
+LEVELS = (1.0, 0.55, 0.3)
+HOLLOW = (240, 110)  # the pumpkin's own boom: centre and width (Hz)
+
 
 # --------------------------------------------------------------------------- building blocks
 
-def _phase(freq: np.ndarray) -> np.ndarray:
-    return 2 * np.pi * np.cumsum(freq) / SR
+def _r():
+    from . import roars  # roars takes SR and PEAK from here, so it is imported only when the sounds are made
+    return roars
 
 
-def _tri(ph: np.ndarray) -> np.ndarray:
-    return 2 / np.pi * np.arcsin(np.sin(ph))
+def _vowel(points, hollow: float = 0.55):
+    """What his mouth lets through saying the vowels `points`, (seconds, vowel) gliding from one to the next."""
+    R = _r()
+    times = [p[0] for p in points]
+
+    def gain(f, t):
+        g = 0.025 + hollow * R._band(HOLLOW[0], HOLLOW[1])(f, t)
+        for k in range(3):
+            c = np.interp(t, times, [VOWELS[v][k] * LOWER for _, v in points])
+            g = g + LEVELS[k] / np.sqrt(1 + ((f - c) / (WIDTHS[k] / 2)) ** 2)
+        return g * R._highpass(60)(f, t)
+    return gain
 
 
-def _square(ph: np.ndarray, duty: float = 0.5) -> np.ndarray:
-    return np.where((ph / (2 * np.pi)) % 1.0 < duty, 1.0, -1.0)
+def syllable(rng, seconds: float, pitch0: float, pitch1: float, vowel: str = "a", h: float = 0.045,
+             rasp: float = 0.25, breath: float = 0.3, loud: float = 1.0) -> np.ndarray:
+    """"Ha" (or "heh", "hoo"): a breath, then the voice on the vowel, its pitch sliding from pitch0 to pitch1."""
+    R = _r()
+    t = R._time(seconds)
+    pitch = np.geomspace(pitch0, pitch1, len(t))
+    voice = R._voice(rng, t, pitch, rasp, 30.0, sub=0.3, breath=breath, jitter=0.035)
+    on = np.clip((t - h) / 0.015, 0, 1)  # the voice starts as the "h" ends
+    x = voice * on + 1.3 * R._noise(rng, t) * (1 - on)
+    x = R._filter(x, _vowel([(0, vowel)]))
+    env = R._env(t, [(0, 0), (0.01, 0.55), (h, 0.7), (h + 0.03, 1), (0.7 * seconds, 0.8), (seconds, 0)])
+    return loud * R._grit(x, 2.0) * env
 
 
-def _samples(seconds: float) -> int:
-    return max(1, int(round(seconds * SR)))
+def laugh(rng, count: int = 3, pitch: float = 105.0, vowel: str = "e", seconds: float = 0.15, gap: float = 0.06,
+          fall: float = 0.93) -> list[tuple[float, np.ndarray]]:
+    """Syllables one after another, each a little lower and softer: placed (start, sound) for roars._mix."""
+    out, at = [], 0.0
+    for k in range(count):
+        p = pitch * fall ** k
+        out.append((at, syllable(rng, seconds, p * 1.04, p * 0.94, vowel, loud=0.92 ** k)))
+        at += seconds + gap
+    return out
 
 
-def _fade(x: np.ndarray, attack: float = 0.004, release: float = 0.015) -> np.ndarray:
-    a, r = min(len(x), _samples(attack)), min(len(x), _samples(release))
-    env = np.ones(len(x))
-    env[:a] = np.linspace(0, 1, a)
-    env[len(x) - r:] = np.minimum(env[len(x) - r:], np.linspace(1, 0, r))
-    return x * env
+def moan(rng, seconds: float = 1.3, pitch: float = 150.0) -> np.ndarray:
+    """A ghostly "ooooOOOooo": breathy, swelling and fading, wavering, the mouth opening a little and closing."""
+    R = _r()
+    t = R._time(seconds)
+    f0 = R._curve(t, [(0, 0.85 * pitch), (0.45 * seconds, 1.15 * pitch), (seconds, 0.8 * pitch)])
+    f0 = f0 * (1 + 0.035 * np.sin(2 * np.pi * 5.5 * t) * np.minimum(1, t / 0.4))
+    x = R._voice(rng, t, f0, 0.08, 20.0, sub=0.15, breath=0.9, jitter=0.02)
+    x = R._filter(x, _vowel([(0, "u"), (0.45 * seconds, "o"), (seconds, "u")], 0.4))
+    return R._norm(x) * R._env(t, [(0, 0), (0.35 * seconds, 1), (0.6 * seconds, 0.9), (seconds, 0)])
 
 
-def _lowpass(x: np.ndarray, cutoff) -> np.ndarray:
-    """One-pole low-pass; `cutoff` in Hz, a number or one value per sample (for "wah" sweeps)."""
-    cutoff = np.broadcast_to(np.asarray(cutoff, float), x.shape)
-    alpha = 1 - np.exp(-2 * np.pi * cutoff / SR)
-    y = np.empty_like(x)
-    acc = 0.0
-    for i in range(len(x)):
-        acc += alpha[i] * (x[i] - acc)
-        y[i] = acc
-    return y
+def whisper(rng, count: int = 4, vowel: str = "i", seconds: float = 0.11, gap: float = 0.05) -> np.ndarray:
+    """A whispered giggle, "hihihihi": breath alone through the vowel, in quick puffs."""
+    R = _r()
+    total = count * (seconds + gap)
+    t = R._time(total)
+    puffs = np.zeros(len(t))
+    for k in range(count):
+        s = k * (seconds + gap)
+        inside = (t >= s) & (t < s + seconds)
+        u = np.clip((t - s) / seconds, 0, 1)
+        puffs += inside * np.sin(np.pi * u) ** 0.6 * 0.85 ** k
+    x = R._filter(R._noise(rng, t), _vowel([(0, vowel)], 0.1)) * puffs
+    return R._norm(R._filter(x, R._highpass(400)))
 
 
-def _gap(seconds: float) -> np.ndarray:
-    return np.zeros(_samples(seconds))
+def hiss(rng, seconds: float = 0.5) -> np.ndarray:
+    """Breath hissed out through the teeth, "hhhsss"."""
+    R = _r()
+    t = R._time(seconds)
+    x = R._filter(R._noise(rng, t), lambda f, tt: R._highpass(_r()._curve(tt, [(0, 900), (seconds, 3200)]), 2)(f, tt)
+                  * R._lowpass(7000)(f, tt))
+    return R._norm(x) * R._env(t, [(0, 0), (0.08, 1), (0.7 * seconds, 0.8), (seconds, 0)])
 
 
-def _sweep(f0: float, f1: float, seconds: float) -> np.ndarray:
-    return np.geomspace(f0, f1, _samples(seconds))
+def creak(rng, seconds: float = 0.55) -> np.ndarray:
+    """A slow creak, as of an old door or a twisting vine: clicks, faster then slower, ringing in wood."""
+    R = _r()
+    t = R._time(seconds)
+    rate = R._curve(t, [(0, 16), (0.45 * seconds, 38), (seconds, 20)])
+    beats = np.floor(np.cumsum(rate) / SR)
+    clicks = (np.diff(beats, prepend=beats[0]) > 0).astype(float)
+    wood = lambda f, tt: R._band(680, 180)(f, tt) + 0.7 * R._band(1450, 300)(f, tt) + 0.5 * R._band(330, 120)(f, tt)
+    x = R._filter(clicks + 0.03 * R._noise(rng, t), wood)
+    return R._norm(x) * R._env(t, [(0, 0), (0.05, 1), (0.8 * seconds, 0.85), (seconds, 0)])
 
 
-def waka(seconds: float = 0.24, low: float = 190.0, high: float = 540.0) -> np.ndarray:
-    """One chomp: "wa" sweeps down as the jaw shuts, "ka" sweeps back up as it opens."""
-    half = seconds / 2
-    parts = []
-    for f in (_sweep(high, low, half), _sweep(low, high, half)):
-        ph = _phase(f)
-        parts.append(_fade(0.75 * _tri(ph) + 0.25 * _square(ph, 0.3), 0.003, 0.012))
-    return np.concatenate([parts[0], _gap(0.012), parts[1]])
+def crunch(rng, seconds: float = 0.3) -> np.ndarray:
+    """A bite: a burst of cracks (teeth through rind and bone) and a wet, hollow thump."""
+    R = _r()
+    t = R._time(seconds)
+    cracks = (rng.random(len(t)) < 300 / SR) * rng.uniform(0.3, 1, len(t)) * np.exp(-t / 0.08)
+    crack = R._filter(cracks + 0.35 * R._noise(rng, t) * np.exp(-t / 0.03),
+                      lambda f, tt: R._highpass(800, 2)(f, tt) * R._lowpass(4500)(f, tt))
+    thump = np.sin(2 * np.pi * np.cumsum(65 + 90 * np.exp(-t * 30)) / SR) * np.exp(-t * 16) * np.minimum(1, t / 0.002)
+    return R._grit(R._norm(crack) + 0.9 * thump, 1.8)
 
 
-def boing(seconds: float = 0.5) -> np.ndarray:
-    t = np.arange(_samples(seconds)) / SR
-    f = 140 + 330 * (1 - np.exp(-t * 11)) + 90 * np.sin(2 * np.pi * 13 * t) * np.exp(-5 * t)
-    ph = _phase(f)
-    return _fade((np.sin(ph) + 0.25 * _tri(2 * ph)) * np.exp(-4.5 * t))
+def shriek(rng, seconds: float = 0.75) -> np.ndarray:
+    """A monster's scream: high, rough and rising, the mouth wide on "aah" then "eeh"."""
+    R = _r()
+    t = R._time(seconds)
+    f0 = R._curve(t, [(0, 190), (0.3 * seconds, 330), (seconds, 260)])
+    x = R._voice(rng, t, f0, 0.45, 34.0, sub=0.35, breath=0.5, jitter=0.07)
+    x = R._filter(x, _vowel([(0, "a"), (0.6 * seconds, "e")], 0.3))
+    return R._grit(x, 3.5) * R._env(t, [(0, 0), (0.06, 1), (0.75 * seconds, 0.9), (seconds, 0)])
 
 
-def bloop(seconds: float = 0.14, f0: float = 260.0, f1: float = 1100.0) -> np.ndarray:
-    ph = _phase(_sweep(f0, f1, seconds))
-    return _fade(np.sin(ph) + 0.2 * _square(ph), 0.003, 0.03)
-
-
-def giggle() -> np.ndarray:
-    """A cartoon "hee-hee-hee-hee": short wobbly chirps, each a little lower."""
-    out = []
-    for k, base in enumerate((980, 920, 860, 800)):
-        t = np.arange(_samples(0.075)) / SR
-        f = base * (1 + 0.18 * t / t[-1]) + 70 * np.sin(2 * np.pi * 28 * t)
-        chirp = _lowpass(_square(_phase(f), 0.25), 2600)
-        out += [_fade(chirp, 0.004, 0.02), _gap(0.035)]
-    return np.concatenate(out)
-
-
-def hiccup() -> np.ndarray:
-    return _fade(np.sin(_phase(_sweep(360, 1500, 0.055))), 0.002, 0.01)
-
-
-def nom() -> np.ndarray:
-    ph = _phase(_sweep(280, 110, 0.085))
-    return _fade(_lowpass(_square(ph, 0.4), 1400), 0.003, 0.02)
-
-
-def big_chomp() -> np.ndarray:
-    n = _samples(0.2)
-    ph = _phase(_sweep(520, 70, 0.2))
-    body = 0.8 * _square(ph, 0.45) + 0.4 * _tri(ph)
-    rng = np.random.default_rng(7)
-    snap = rng.uniform(-1, 1, n) * np.exp(-np.arange(n) / (0.012 * SR))  # the teeth snapping shut
-    return _fade(_lowpass(body + 0.8 * snap, 2200), 0.002, 0.03)
-
-
-def jingle() -> np.ndarray:
-    notes = []
-    for f in (523.25, 659.25, 783.99, 1046.5):  # C E G C, up an octave
-        ph = _phase(np.full(_samples(0.075), f))
-        notes += [_fade(0.7 * _square(ph, 0.5) + 0.3 * _tri(ph), 0.003, 0.02), _gap(0.012)]
-    return np.concatenate(notes)
-
-
-def sad_slide() -> np.ndarray:
-    """"Wah wah wah waaah": four notes stepping down, the last one long, wobbling and drooping."""
-    out = []
-    notes = ((466.16, 0.3), (440.0, 0.3), (415.30, 0.3), (392.0, 1.05))
-    for k, (f0, seconds) in enumerate(notes):
-        t = np.arange(_samples(seconds)) / SR
-        last = k == len(notes) - 1
-        f = f0 * ((1 - 0.07 * (t / t[-1]) ** 2) if last else 1.0)
-        if last:
-            f = f + f0 * 0.022 * np.sin(2 * np.pi * 6 * t) * np.minimum(1, t * 3)
-        ph = _phase(np.broadcast_to(f, t.shape))
-        raw = 0.6 * _square(ph, 0.5) + 0.4 * _tri(ph)
-        opening = np.sin(np.pi * np.minimum(1, t / (0.9 * t[-1]))) ** 0.7  # the "wah": the mute opens and shuts
-        out += [_fade(_lowpass(raw, 350 + 2300 * opening), 0.01, 0.06), _gap(0.04)]
-    return np.concatenate(out)
-
-
-def pop(f: float = 1500.0) -> np.ndarray:
-    t = np.arange(_samples(0.04)) / SR
-    return _fade(np.sin(_phase(np.full(len(t), f))) * np.exp(-t * 60), 0.001, 0.01)
+def wail(rng, seconds: float = 1.4) -> np.ndarray:
+    """A long cry falling away, "aaaahhhh" sinking to "ooo", wavering more and more."""
+    R = _r()
+    t = R._time(seconds)
+    f0 = np.geomspace(250, 85, len(t)) * (1 + 0.05 * np.sin(2 * np.pi * 6 * t) * np.minimum(1, t / seconds * 1.5))
+    x = R._voice(rng, t, f0, 0.35, 26.0, sub=0.35, breath=0.45, jitter=0.05)
+    x = R._filter(x, _vowel([(0, "a"), (0.6 * seconds, "o"), (seconds, "u")]))
+    return R._grit(x, 2.5) * R._env(t, [(0, 0), (0.08, 1), (0.6 * seconds, 0.8), (seconds, 0)])
 
 
 # --------------------------------------------------------------------------- the sounds
 
-def _join(*parts: np.ndarray) -> np.ndarray:
-    x = np.concatenate(parts)
+def _join(*placed, echo: float = 0.3) -> np.ndarray:
+    """The sounds laid together, cleaned, echoing at `echo` (0: none, and no echo's tail, for a short bite)."""
+    R = _r()
+    x = R._finish(R._mix(*placed))
+    if echo:
+        x = R._echo(x, echo)
     return x / max(1e-9, np.abs(x).max()) * PEAK
 
 
 def pacman_sounds() -> dict[str, list[np.ndarray]]:
     """Name -> variants (the game picks one at random each time)."""
+    R = _r()
+    r = lambda name: R._rng("pumpkin " + name)
+    evil = [(0, syllable(r("mwa"), 0.42, 120, 112, "a", h=0.0, rasp=0.3))]  # "mwa": the voice from the start
+    evil += [(0.5 + s, x) for s, x in laugh(r("haha"), 4, 112, "a", 0.17, 0.07, 0.95)]
+    evil += [(0.5 + 4 * 0.24, syllable(r("haaa"), 0.7, 108, 72, "a", rasp=0.35))]
     return {
-        "select": [_join(waka(), _gap(0.03), waka(), _gap(0.05), bloop()),
-                   _join(waka(0.28), _gap(0.06), boing()),
-                   _join(giggle(), _gap(0.05), waka(0.22, 220, 600))],
-        "move": [_join(waka(0.17), _gap(0.015), waka(0.17), _gap(0.015), waka(0.17)),
-                 _join(waka(0.2), _gap(0.04), hiccup())],
-        "attack": [_join(big_chomp(), _gap(0.07), nom(), _gap(0.05), nom())],
-        "train": [_join(jingle(), _gap(0.05), waka(0.22, 220, 620))],
-        "chomp": [_join(waka(0.18, 170, 460))],
-        "death": [_join(sad_slide(), _gap(0.08), pop(1500), _gap(0.07), pop(1800))],
+        "select": [_join(*laugh(r("heh"), 3, 98, "e")),
+                   _join((0, moan(r("moan"))), echo=0.5),
+                   _join((0, whisper(r("whisper"))), (0.62, 0.6 * creak(r("creak1"), 0.45)), echo=0.35)],
+        "move": [_join((0, R.growl(r("growl"), 0.55, [(0, 70), (0.55, 85)], [(0, 0.1), (0.55, 0.3)], 24.0)),
+                       (0.55, syllable(r("huh"), 0.16, 100, 90, "e"))),
+                 _join((0, creak(r("creak2"))), (0.45, 0.8 * hiss(r("hiss"), 0.45)), echo=0.25)],
+        "attack": [_join((0, R.growl(r("snarl"), 0.35, [(0, 75), (0.35, 110)], [(0, 0.1), (0.35, 0.5)], 28.0)),
+                         (0.28, shriek(r("shriek"))), (1.0, crunch(r("bite1"))))],
+        "train": [_join(*evil, echo=0.45)],
+        "chomp": [_join((0, crunch(r("bite2"), 0.25)), (0.12, 0.5 * R.growl(r("gnaw"), 0.3, 80.0, 0.2, 26.0)),
+                        echo=0)],
+        "death": [_join((0, wail(r("wail"))), (1.25, crunch(r("split"), 0.4)), (1.3, R.thud(r("thud"))),
+                        (1.6, 0.35 * hiss(r("last breath"), 0.6)), echo=0.4)],
     }
 
 

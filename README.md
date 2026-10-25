@@ -106,7 +106,7 @@ tools/aoh/gameplay.py    Pac-Man and the Bone Dragon at the Wonder: the .dat cha
 tools/aoh/langdll.py     reads and changes strings in the game's language DLLs
 tools/aoh/pe.py          Windows DLL/exe resources: read them, give a copy new ones in an added section
 tools/aoh/appicon.py     the jack-o'-lantern icon: the .ico file, and in place in the mod's own exe
-tools/aoh/sounds.py      Pac-Man's sounds, synthesised in an 8-bit arcade style
+tools/aoh/sounds.py      Pac-Man's sounds, synthesised: a jack-o'-lantern's evil laugh, moans, creaks and crunches
 tools/aoh/roars.py       the dragon's sounds: roars, growls, wing beats and fire, synthesised
 tools/aoh/slpmap.py      which original sprite id each unit replaces
 tools/aoh/spritemap.py   finds buildings, walls, trees and decorations by name in the .dat
